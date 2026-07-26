@@ -1,0 +1,110 @@
+{
+  "identifier" : "82D0BCF4-30C7-4AAB-98CE-17E4CE556D3D",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "DFF0EC8A-3A9E-4765-A22D-6C19058A7E46",
+      "localizations" : [
+        {
+          "description" : "Ein kleiner freiwilliger Beitrag zur Weiterentwicklung von GymPit.",
+          "displayName" : "Kleiner Kaffee",
+          "locale" : "de_DE"
+        },
+        {
+          "description" : "A small voluntary contribution to GymPit development.",
+          "displayName" : "Small coffee",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "app.gympit.support.small_coffee",
+      "referenceName" : "Kleiner Kaffee",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "5B25474E-A94D-4BD3-A3D9-2B5769A30F88",
+      "localizations" : [
+        {
+          "description" : "Ein freiwilliger Beitrag zur Weiterentwicklung von GymPit.",
+          "displayName" : "Unterstützer",
+          "locale" : "de_DE"
+        },
+        {
+          "description" : "A voluntary contribution to GymPit development.",
+          "displayName" : "Supporter",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "app.gympit.support.supporter",
+      "referenceName" : "Unterstützer",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "5.99",
+      "familyShareable" : false,
+      "internalID" : "BED16501-50F4-481A-811D-3DE9343D6A56",
+      "localizations" : [
+        {
+          "description" : "Eine größere freiwillige Unterstützung für GymPit.",
+          "displayName" : "Große Unterstützung",
+          "locale" : "de_DE"
+        },
+        {
+          "description" : "A larger voluntary contribution to GymPit.",
+          "displayName" : "Big support",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "app.gympit.support.big_support",
+      "referenceName" : "Große Unterstützung",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "F279DB09-B3E4-48D0-9577-0137DCED08AE",
+      "localizations" : [
+        {
+          "description" : "Ein freiwilliger Beitrag, der die laufenden Kosten von GymPit unterstützt.",
+          "displayName" : "Projekt fördern",
+          "locale" : "de_DE"
+        },
+        {
+          "description" : "A voluntary contribution supporting GymPit running costs.",
+          "displayName" : "Fund the project",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "app.gympit.support.project",
+      "referenceName" : "Projekt fördern",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "Q3CD6ZPU9J",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "de_DE",
+    "_storefront" : "DEU",
+    "_storeKitErrors" : [
+
+    ],
+    "_subscriptionBillingGracePeriodEnabled" : false,
+    "_subscriptionBillingRetryEnabled" : false,
+    "_title" : "GymPit Support",
+    "_winBackOffersEnabled" : false
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
