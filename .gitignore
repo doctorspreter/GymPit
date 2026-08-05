@@ -3,5 +3,11 @@ build/
 DerivedData/
 *.xcuserstate
 xcuserdata/
+__pycache__/
+*.pyc
 Release/Export/
-Release/*.xcarchive/
+Release/Current/AppStoreExport/
+Release/**/*.xcarchive/
+
+# Experimentierkopien gehoeren nicht ins Repo
+test/
