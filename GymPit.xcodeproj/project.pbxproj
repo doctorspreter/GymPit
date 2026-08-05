@@ -12,25 +12,25 @@
 		0A1B2C3D4E5F001001000003 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000013 /* Models.swift */; };
 		0A1B2C3D4E5F001001000004 /* WorkoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000014 /* WorkoutStore.swift */; };
 		0A1B2C3D4E5F001001000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000015 /* Assets.xcassets */; };
-		0A1B2C3D4E5F001001000401 /* ExerciseImages in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000400 /* ExerciseImages */; };
-		0A1B2C3D4E5F001001000403 /* ExerciseDetailImages in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000402 /* ExerciseDetailImages */; };
-		0A1B2C3D4E5F001001000405 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */; };
-		0A1B2C3D4E5F001001000406 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */; };
-		0A1B2C3D4E5F001001000407 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */; };
+		0A1B2C3D4E5F001001000101 /* AppIcons/AppIcon60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000017 /* AppIcons/AppIcon60x60@2x.png */; };
+		0A1B2C3D4E5F001001000102 /* AppIcons/AppIcon60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000018 /* AppIcons/AppIcon60x60@3x.png */; };
+		0A1B2C3D4E5F001001000103 /* AppIcons/AppIcon76x76@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000019 /* AppIcons/AppIcon76x76@2x~ipad.png */; };
+		0A1B2C3D4E5F001001000104 /* AppIcons/AppIcon83.5x83.5@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100001A /* AppIcons/AppIcon83.5x83.5@2x~ipad.png */; };
 		0A1B2C3D4E5F001001000201 /* SharedWorkoutActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000021 /* SharedWorkoutActivity.swift */; };
 		0A1B2C3D4E5F001001000202 /* WorkoutLiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000022 /* WorkoutLiveActivityController.swift */; };
-		0A1B2C3D4E5F001001000207 /* WorkoutHealthExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000029 /* WorkoutHealthExporter.swift */; };
-		0A1B2C3D4E5F001001000208 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002A /* AppLanguage.swift */; };
-		0A1B2C3D4E5F001001000211 /* GymPitSharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */; };
-		0A1B2C3D4E5F001001000213 /* PhoneWatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002D /* PhoneWatchConnectivityController.swift */; };
-		0A1B2C3D4E5F001001000214 /* GymPitBridgeSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002E /* GymPitBridgeSyncService.swift */; };
-		0A1B2C3D4E5F001001000215 /* GymPitBridgeKeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002F /* GymPitBridgeKeychainStore.swift */; };
 		0A1B2C3D4E5F001001000203 /* GymPitLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000025 /* GymPitLiveActivity.swift */; };
 		0A1B2C3D4E5F001001000204 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000013 /* Models.swift */; };
 		0A1B2C3D4E5F001001000205 /* SharedWorkoutActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000021 /* SharedWorkoutActivity.swift */; };
+		0A1B2C3D4E5F001001000206 /* GymPitLiveActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000028 /* GymPitLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0A1B2C3D4E5F001001000207 /* WorkoutHealthExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000029 /* WorkoutHealthExporter.swift */; };
+		0A1B2C3D4E5F001001000208 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002A /* AppLanguage.swift */; };
 		0A1B2C3D4E5F001001000209 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002A /* AppLanguage.swift */; };
+		0A1B2C3D4E5F001001000211 /* GymPitSharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */; };
 		0A1B2C3D4E5F001001000212 /* GymPitSharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */; };
-		0A1B2C3D4E5F001001000206 /* GymPitLiveActivity.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000028 /* GymPitLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0A1B2C3D4E5F001001000213 /* PhoneWatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002D /* PhoneWatchConnectivityController.swift */; };
+		0A1B2C3D4E5F001001000214 /* GymPitBridgeSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002E /* GymPitBridgeSyncService.swift */; };
+		0A1B2C3D4E5F001001000215 /* GymPitBridgeKeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002F /* GymPitBridgeKeychainStore.swift */; };
+		0A1B2C3D4E5F001001000216 /* TrainerRecommendation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100003A /* TrainerRecommendation.swift */; };
 		0A1B2C3D4E5F001001000301 /* GymPitWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F0010010000F1 /* GymPitWatchApp.swift */; };
 		0A1B2C3D4E5F001001000302 /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F0010010000F2 /* WatchContentView.swift */; };
 		0A1B2C3D4E5F001001000303 /* WatchWorkoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F0010010000F3 /* WatchWorkoutStore.swift */; };
@@ -38,11 +38,10 @@
 		0A1B2C3D4E5F001001000305 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002A /* AppLanguage.swift */; };
 		0A1B2C3D4E5F001001000306 /* GymPitSharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */; };
 		0A1B2C3D4E5F001001000307 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F0010010000F6 /* Assets.xcassets */; };
-		0A1B2C3D4E5F001001000308 /* GymPitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F0010010000F7 /* GymPitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		0A1B2C3D4E5F001001000101 /* AppIcon60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000017 /* AppIcon60x60@2x.png */; };
-		0A1B2C3D4E5F001001000102 /* AppIcon60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000018 /* AppIcon60x60@3x.png */; };
-		0A1B2C3D4E5F001001000103 /* AppIcon76x76@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000019 /* AppIcon76x76@2x~ipad.png */; };
-		0A1B2C3D4E5F001001000104 /* AppIcon83.5x83.5@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100001A /* AppIcon83.5x83.5@2x~ipad.png */; };
+		0A1B2C3D4E5F001001000403 /* ExerciseDetailImages in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000402 /* ExerciseDetailImages */; };
+		0A1B2C3D4E5F001001000405 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */; };
+		0A1B2C3D4E5F001001000406 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */; };
+		0A1B2C3D4E5F001001000407 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,36 +52,18 @@
 			remoteGlobalIDString = 0A1B2C3D4E5F0010010000C0;
 			remoteInfo = GymPitLiveActivity;
 		};
-		0A1B2C3D4E5F0010010000B2 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 0A1B2C3D4E5F001001000080 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 0A1B2C3D4E5F0010010000FC;
-			remoteInfo = GymPitWatch;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		0A1B2C3D4E5F0010010000A3 /* Embed App Extensions */ = {
+		0A1B2C3D4E5F0010010000A3 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				0A1B2C3D4E5F001001000206 /* GymPitLiveActivity.appex in Embed App Extensions */,
+				0A1B2C3D4E5F001001000206 /* GymPitLiveActivity.appex in Embed Foundation Extensions */,
 			);
-			name = "Embed App Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		0A1B2C3D4E5F0010010000FB /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				0A1B2C3D4E5F001001000308 /* GymPitWatch.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -94,14 +75,11 @@
 		0A1B2C3D4E5F001001000013 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000014 /* WorkoutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutStore.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		0A1B2C3D4E5F001001000400 /* ExerciseImages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ExerciseImages; sourceTree = "<group>"; };
-		0A1B2C3D4E5F001001000402 /* ExerciseDetailImages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ExerciseDetailImages; sourceTree = "<group>"; };
-		0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		0A1B2C3D4E5F001001000017 /* AppIcon60x60@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcons/AppIcon60x60@2x.png"; sourceTree = "<group>"; };
-		0A1B2C3D4E5F001001000018 /* AppIcon60x60@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcons/AppIcon60x60@3x.png"; sourceTree = "<group>"; };
-		0A1B2C3D4E5F001001000019 /* AppIcon76x76@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcons/AppIcon76x76@2x~ipad.png"; sourceTree = "<group>"; };
-		0A1B2C3D4E5F00100100001A /* AppIcon83.5x83.5@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcons/AppIcon83.5x83.5@2x~ipad.png"; sourceTree = "<group>"; };
+		0A1B2C3D4E5F001001000017 /* AppIcons/AppIcon60x60@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcons/AppIcon60x60@2x.png"; sourceTree = "<group>"; };
+		0A1B2C3D4E5F001001000018 /* AppIcons/AppIcon60x60@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcons/AppIcon60x60@3x.png"; sourceTree = "<group>"; };
+		0A1B2C3D4E5F001001000019 /* AppIcons/AppIcon76x76@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcons/AppIcon76x76@2x~ipad.png"; sourceTree = "<group>"; };
+		0A1B2C3D4E5F00100100001A /* AppIcons/AppIcon83.5x83.5@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcons/AppIcon83.5x83.5@2x~ipad.png"; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000021 /* SharedWorkoutActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedWorkoutActivity.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000022 /* WorkoutLiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivityController.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000023 /* GymPit.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GymPit.entitlements; sourceTree = "<group>"; };
@@ -115,6 +93,7 @@
 		0A1B2C3D4E5F00100100002D /* PhoneWatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWatchConnectivityController.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F00100100002E /* GymPitBridgeSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPitBridgeSyncService.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F00100100002F /* GymPitBridgeKeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPitBridgeKeychainStore.swift; sourceTree = "<group>"; };
+		0A1B2C3D4E5F00100100003A /* TrainerRecommendation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainerRecommendation.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F1 /* GymPitWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPitWatchApp.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F2 /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F3 /* WatchWorkoutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutStore.swift; sourceTree = "<group>"; };
@@ -122,6 +101,8 @@
 		0A1B2C3D4E5F0010010000F5 /* GymPitWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GymPitWatch.entitlements; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F7 /* GymPitWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GymPitWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A1B2C3D4E5F001001000402 /* ExerciseDetailImages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ExerciseDetailImages; sourceTree = "<group>"; };
+		0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -149,7 +130,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0A1B2C3D4E5F001001000020 /* GymPit */ = {
+		0A1B2C3D4E5F001001000020 /* Sources/GymPit */ = {
 			isa = PBXGroup;
 			children = (
 				0A1B2C3D4E5F001001000011 /* GymPitApp.swift */,
@@ -164,26 +145,26 @@
 				0A1B2C3D4E5F00100100002D /* PhoneWatchConnectivityController.swift */,
 				0A1B2C3D4E5F00100100002E /* GymPitBridgeSyncService.swift */,
 				0A1B2C3D4E5F00100100002F /* GymPitBridgeKeychainStore.swift */,
+				0A1B2C3D4E5F00100100003A /* TrainerRecommendation.swift */,
 				0A1B2C3D4E5F001001000016 /* Info.plist */,
 				0A1B2C3D4E5F001001000023 /* GymPit.entitlements */,
 				0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */,
 				0A1B2C3D4E5F001001000015 /* Assets.xcassets */,
-				0A1B2C3D4E5F001001000400 /* ExerciseImages */,
 				0A1B2C3D4E5F001001000402 /* ExerciseDetailImages */,
-				0A1B2C3D4E5F001001000017 /* AppIcon60x60@2x.png */,
-				0A1B2C3D4E5F001001000018 /* AppIcon60x60@3x.png */,
-				0A1B2C3D4E5F001001000019 /* AppIcon76x76@2x~ipad.png */,
-				0A1B2C3D4E5F00100100001A /* AppIcon83.5x83.5@2x~ipad.png */,
+				0A1B2C3D4E5F001001000017 /* AppIcons/AppIcon60x60@2x.png */,
+				0A1B2C3D4E5F001001000018 /* AppIcons/AppIcon60x60@3x.png */,
+				0A1B2C3D4E5F001001000019 /* AppIcons/AppIcon76x76@2x~ipad.png */,
+				0A1B2C3D4E5F00100100001A /* AppIcons/AppIcon83.5x83.5@2x~ipad.png */,
 			);
-			path = GymPit;
+			path = Sources/GymPit;
 			sourceTree = "<group>";
 		};
 		0A1B2C3D4E5F001001000040 = {
 			isa = PBXGroup;
 			children = (
-				0A1B2C3D4E5F001001000020 /* GymPit */,
-				0A1B2C3D4E5F0010010000E0 /* GymPitLiveActivity */,
-				0A1B2C3D4E5F0010010000F0 /* GymPitWatch */,
+				0A1B2C3D4E5F001001000020 /* Sources/GymPit */,
+				0A1B2C3D4E5F0010010000E0 /* Sources/GymPitLiveActivity */,
+				0A1B2C3D4E5F0010010000F0 /* Sources/GymPitWatch */,
 				0A1B2C3D4E5F001001000041 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -198,17 +179,17 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		0A1B2C3D4E5F0010010000E0 /* GymPitLiveActivity */ = {
+		0A1B2C3D4E5F0010010000E0 /* Sources/GymPitLiveActivity */ = {
 			isa = PBXGroup;
 			children = (
 				0A1B2C3D4E5F001001000025 /* GymPitLiveActivity.swift */,
 				0A1B2C3D4E5F001001000026 /* Info.plist */,
 				0A1B2C3D4E5F001001000027 /* GymPitLiveActivity.entitlements */,
 			);
-			path = GymPitLiveActivity;
+			path = Sources/GymPitLiveActivity;
 			sourceTree = "<group>";
 		};
-		0A1B2C3D4E5F0010010000F0 /* GymPitWatch */ = {
+		0A1B2C3D4E5F0010010000F0 /* Sources/GymPitWatch */ = {
 			isa = PBXGroup;
 			children = (
 				0A1B2C3D4E5F0010010000F1 /* GymPitWatchApp.swift */,
@@ -218,7 +199,7 @@
 				0A1B2C3D4E5F0010010000F5 /* GymPitWatch.entitlements */,
 				0A1B2C3D4E5F0010010000F6 /* Assets.xcassets */,
 			);
-			path = GymPitWatch;
+			path = Sources/GymPitWatch;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -231,14 +212,12 @@
 				0A1B2C3D4E5F001001000060 /* Sources */,
 				0A1B2C3D4E5F001001000030 /* Frameworks */,
 				0A1B2C3D4E5F001001000070 /* Resources */,
-				0A1B2C3D4E5F0010010000FB /* Embed Watch Content */,
-				0A1B2C3D4E5F0010010000A3 /* Embed App Extensions */,
+				0A1B2C3D4E5F0010010000A3 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				0A1B2C3D4E5F0010010000B1 /* PBXTargetDependency */,
-				0A1B2C3D4E5F0010010000B3 /* PBXTargetDependency */,
 			);
 			name = GymPit;
 			packageProductDependencies = (
@@ -293,7 +272,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2650;
-				LastUpgradeCheck = 2650;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					0A1B2C3D4E5F001001000050 = {
 						CreatedOnToolsVersion = 26.5;
@@ -336,13 +315,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A1B2C3D4E5F001001000005 /* Assets.xcassets in Resources */,
-				0A1B2C3D4E5F001001000401 /* ExerciseImages in Resources */,
 				0A1B2C3D4E5F001001000403 /* ExerciseDetailImages in Resources */,
 				0A1B2C3D4E5F001001000405 /* PrivacyInfo.xcprivacy in Resources */,
-				0A1B2C3D4E5F001001000101 /* AppIcon60x60@2x.png in Resources */,
-				0A1B2C3D4E5F001001000102 /* AppIcon60x60@3x.png in Resources */,
-				0A1B2C3D4E5F001001000103 /* AppIcon76x76@2x~ipad.png in Resources */,
-				0A1B2C3D4E5F001001000104 /* AppIcon83.5x83.5@2x~ipad.png in Resources */,
+				0A1B2C3D4E5F001001000101 /* AppIcons/AppIcon60x60@2x.png in Resources */,
+				0A1B2C3D4E5F001001000102 /* AppIcons/AppIcon60x60@3x.png in Resources */,
+				0A1B2C3D4E5F001001000103 /* AppIcons/AppIcon76x76@2x~ipad.png in Resources */,
+				0A1B2C3D4E5F001001000104 /* AppIcons/AppIcon83.5x83.5@2x~ipad.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -382,6 +360,7 @@
 				0A1B2C3D4E5F001001000213 /* PhoneWatchConnectivityController.swift in Sources */,
 				0A1B2C3D4E5F001001000214 /* GymPitBridgeSyncService.swift in Sources */,
 				0A1B2C3D4E5F001001000215 /* GymPitBridgeKeychainStore.swift in Sources */,
+				0A1B2C3D4E5F001001000216 /* TrainerRecommendation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -418,11 +397,6 @@
 			target = 0A1B2C3D4E5F0010010000C0 /* GymPitLiveActivity */;
 			targetProxy = 0A1B2C3D4E5F0010010000B0 /* PBXContainerItemProxy */;
 		};
-		0A1B2C3D4E5F0010010000B3 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 0A1B2C3D4E5F0010010000FC /* GymPitWatch */;
-			targetProxy = 0A1B2C3D4E5F0010010000B2 /* PBXContainerItemProxy */;
-		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -431,6 +405,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -461,7 +436,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = Q3CD6ZPU9J;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -485,6 +460,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -495,6 +471,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -525,7 +502,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = Q3CD6ZPU9J;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -542,6 +519,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -552,24 +530,27 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = GymPit/GymPit.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Sources/GymPit/GymPit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Q3CD6ZPU9J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = GymPit/Info.plist;
+				INFOPLIST_FILE = Sources/GymPit/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 26.08;
 				PRODUCT_BUNDLE_IDENTIFIER = app.gympit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -578,24 +559,27 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = GymPit/GymPit.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Sources/GymPit/GymPit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Q3CD6ZPU9J;
 				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = GymPit/Info.plist;
+				INFOPLIST_FILE = Sources/GymPit/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 26.08;
 				PRODUCT_BUNDLE_IDENTIFIER = app.gympit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -603,12 +587,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = GymPitLiveActivity/GymPitLiveActivity.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Sources/GymPitLiveActivity/GymPitLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Q3CD6ZPU9J;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = GymPitLiveActivity/Info.plist;
+				INFOPLIST_FILE = Sources/GymPitLiveActivity/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -619,9 +602,13 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.gympit.liveactivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -629,12 +616,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = GymPitLiveActivity/GymPitLiveActivity.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Sources/GymPitLiveActivity/GymPitLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Q3CD6ZPU9J;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = GymPitLiveActivity/Info.plist;
+				INFOPLIST_FILE = Sources/GymPitLiveActivity/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -645,24 +631,27 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.gympit.liveactivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
 		0A1B2C3D4E5F0010010000FE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = GymPitWatch/GymPitWatch.entitlements;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Sources/GymPitWatch/GymPitWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Q3CD6ZPU9J;
+				CURRENT_PROJECT_VERSION = 4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = GymPitWatch/Info.plist;
+				INFOPLIST_FILE = Sources/GymPitWatch/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -682,15 +671,14 @@
 		0A1B2C3D4E5F0010010000FF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = GymPitWatch/GymPitWatch.entitlements;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Sources/GymPitWatch/GymPitWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Q3CD6ZPU9J;
+				CURRENT_PROJECT_VERSION = 4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = GymPitWatch/Info.plist;
+				INFOPLIST_FILE = Sources/GymPitWatch/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
