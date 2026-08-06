@@ -288,17 +288,19 @@ enum GymPitBridgeSyncError: LocalizedError {
     case serverMessage(String)
 
     var errorDescription: String? {
+        let language = AppLanguage.current
         switch self {
         case .missingURL:
-            "Healthpit-Adresse fehlt."
+            return language.ui("Healthpit-Adresse fehlt.")
         case .missingToken:
-            "Healthpit-Token fehlt."
+            return language.ui("Healthpit-Token fehlt.")
         case .invalidURL:
-            "Healthpit-Adresse ist ungültig."
+            return language.ui("Healthpit-Adresse ist ungültig.")
         case .serverRejected(let code):
-            "Healthpit hat die Übertragung abgelehnt (\(code))."
+            return language.ui(format: "Healthpit hat die Übertragung abgelehnt (%d).", code)
         case .serverMessage(let message):
-            message
+            // Bereits uebersetzt, wo die Meldung entsteht.
+            return message
         }
     }
 }
@@ -346,14 +348,14 @@ final class GymPitBridgeSyncService {
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(statusCode) else {
             if statusCode == 401 || statusCode == 403 {
-                throw GymPitBridgeSyncError.serverMessage(
-                    "Home Assistant hat den Token abgelehnt. Bitte einen neuen Long-Lived Access Token anlegen."
-                )
+                throw GymPitBridgeSyncError.serverMessage(AppLanguage.current.ui(
+                    "Home Assistant hat den Token abgelehnt. Bitte einen neuen Long-Lived Access Token eintragen."
+                ))
             }
             if statusCode == 404 {
-                throw GymPitBridgeSyncError.serverMessage(
+                throw GymPitBridgeSyncError.serverMessage(AppLanguage.current.ui(
                     "Home Assistant antwortet, aber die Healthpit-Integration ist dort nicht eingerichtet."
-                )
+                ))
             }
             if let message = Self.bridgeErrorMessage(from: data, statusCode: statusCode) {
                 throw GymPitBridgeSyncError.serverMessage(message)
@@ -475,9 +477,9 @@ final class GymPitBridgeSyncService {
         guard (200..<300).contains(statusCode) else {
             if statusCode == 401 || statusCode == 403 {
                 // Der Token wurde in Home Assistant widerrufen oder ist falsch.
-                throw GymPitBridgeSyncError.serverMessage(
+                throw GymPitBridgeSyncError.serverMessage(AppLanguage.current.ui(
                     "Home Assistant hat den Token abgelehnt. Bitte einen neuen Long-Lived Access Token eintragen."
-                )
+                ))
             }
             if let message = Self.bridgeErrorMessage(from: data, statusCode: statusCode) {
                 throw GymPitBridgeSyncError.serverMessage(message)
@@ -533,9 +535,9 @@ final class GymPitBridgeSyncService {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? "GymPit"
 
         guard !token.isEmpty else {
-            throw GymPitBridgeSyncError.serverMessage(
+            throw GymPitBridgeSyncError.serverMessage(AppLanguage.current.ui(
                 "GymPit ist nicht verbunden. Bitte zuerst den Home-Assistant-Token eintragen."
-            )
+            ))
         }
 
         let baseURL = try await Self.configuredBaseURL(defaults: defaults)
@@ -569,7 +571,9 @@ final class GymPitBridgeSyncService {
         guard !baseURLText.isEmpty else { throw GymPitBridgeSyncError.missingURL }
         guard let baseURL = URL(string: baseURLText) else { throw GymPitBridgeSyncError.invalidURL }
         guard baseURL.scheme?.lowercased() == "https" else {
-            throw GymPitBridgeSyncError.serverMessage("Bitte die externe Healthpit-Adresse mit https:// eintragen.")
+            throw GymPitBridgeSyncError.serverMessage(
+                AppLanguage.current.ui("Bitte die externe Healthpit-Adresse mit https:// eintragen.")
+            )
         }
         return baseURL
     }
@@ -652,7 +656,7 @@ final class GymPitBridgeSyncService {
         // Die Integration nennt den Grund "error", aeltere Gegenstellen "detail".
         let detail = (object["detail"] as? String) ?? (object["error"] as? String) ?? ""
         guard !detail.isEmpty else { return nil }
-        return "Healthpit hat abgelehnt (\(statusCode)): \(detail)"
+        return AppLanguage.current.ui(format: "Healthpit hat abgelehnt (%d): %@", statusCode, detail)
     }
 
     private static func trimmedKeychainValue(for key: String) -> String {

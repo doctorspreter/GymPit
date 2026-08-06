@@ -384,6 +384,28 @@ enum WorkoutCSVCodec {
     }
 }
 
+/// Eine Zeile Statusanzeige. Der Text ist bereits uebersetzt; `isError` und
+/// `isIdle` ersetzen die frueheren Vergleiche auf deutsche Zeichenketten, die
+/// in jeder anderen Sprache ins Leere liefen.
+struct StatusMessage: Equatable {
+    var text: String
+    var isError = false
+    /// Es ist noch nichts passiert — die Oberflaeche zeigt die Zeile dann nicht.
+    var isIdle = false
+
+    static func info(_ text: String) -> StatusMessage {
+        StatusMessage(text: text)
+    }
+
+    static func error(_ text: String) -> StatusMessage {
+        StatusMessage(text: text, isError: true)
+    }
+
+    static func idle(_ text: String) -> StatusMessage {
+        StatusMessage(text: text, isIdle: true)
+    }
+}
+
 @MainActor
 final class WorkoutStore: ObservableObject {
     @Published private(set) var plan: WorkoutPlan {
@@ -410,9 +432,11 @@ final class WorkoutStore: ObservableObject {
     @Published private(set) var pendingRoutineExercises: [Exercise] = []
     @Published private(set) var pendingRoutineSetExercises: [Exercise] = []
     let restTimerState = WorkoutRestTimerState()
-    @Published private(set) var healthExportStatus: String = "Noch nicht übertragen"
+    @Published private(set) var healthExportStatus: StatusMessage =
+        .idle(AppLanguage.current.ui("Noch nicht übertragen"))
     @Published private(set) var isHealthExportInProgress = false
-    @Published private(set) var bridgeSyncStatus: String = "Healthpit nicht übertragen"
+    @Published private(set) var bridgeSyncStatus: StatusMessage =
+        .idle(AppLanguage.current.ui("Healthpit nicht übertragen"))
 
     private var isSyncingRoutine = false
     private var healthExportedSessionIDs: Set<UUID> = []
@@ -1030,14 +1054,16 @@ final class WorkoutStore: ObservableObject {
     }
 
     func connectAppleHealth() {
-        healthExportStatus = "Apple Health wird verbunden..."
+        healthExportStatus = .info(AppLanguage.current.ui("Apple Health wird verbunden..."))
         WorkoutHealthExporter.shared.requestAuthorization { [weak self] result in
             Task { @MainActor in
                 switch result {
                 case .success:
-                    self?.healthExportStatus = "Apple Health verbunden"
+                    self?.healthExportStatus = .info(AppLanguage.current.ui("Apple Health verbunden"))
                 case .failure(let error):
-                    self?.healthExportStatus = "Apple Health Fehler: \(error.localizedDescription)"
+                    self?.healthExportStatus = .error(
+                        AppLanguage.current.ui(format: "Apple Health Fehler: %@", error.localizedDescription)
+                    )
                 }
             }
         }
@@ -1045,7 +1071,7 @@ final class WorkoutStore: ObservableObject {
 
     func exportLatestSessionToHealth() {
         guard let session = latestCompletedSession ?? history.first else {
-            healthExportStatus = "Kein abgeschlossenes Training vorhanden"
+            healthExportStatus = .info(AppLanguage.current.ui("Kein abgeschlossenes Training vorhanden"))
             return
         }
         exportSessionToHealth(session)
@@ -1053,25 +1079,29 @@ final class WorkoutStore: ObservableObject {
 
     func exportAllHistoricSessionsToHealth() {
         guard !isHealthExportInProgress else {
-            healthExportStatus = "Apple-Health-Übertragung läuft bereits"
+            healthExportStatus = .info(AppLanguage.current.ui("Apple-Health-Übertragung läuft bereits"))
             return
         }
 
         let sessions = history
         guard !sessions.isEmpty else {
-            healthExportStatus = "Keine alten Workouts vorhanden"
+            healthExportStatus = .info(AppLanguage.current.ui("Keine alten Workouts vorhanden"))
             return
         }
 
         let pendingSessions = sessions.filter { !healthExportedSessionIDs.contains($0.id) }
         let alreadyExported = sessions.count - pendingSessions.count
         guard !pendingSessions.isEmpty else {
-            healthExportStatus = "Alle \(sessions.count) Workouts sind bereits in Apple Health"
+            healthExportStatus = .info(
+                AppLanguage.current.ui(format: "Alle Workouts sind bereits in Apple Health (%d)", sessions.count)
+            )
             return
         }
 
         isHealthExportInProgress = true
-        healthExportStatus = "Apple Health: 0/\(pendingSessions.count) wird übertragen..."
+        healthExportStatus = .info(
+            AppLanguage.current.ui(format: "Apple Health: 0/%d wird übertragen...", pendingSessions.count)
+        )
         exportHistoricSessions(
             pendingSessions,
             total: pendingSessions.count,
@@ -1084,24 +1114,28 @@ final class WorkoutStore: ObservableObject {
     func uploadAllHistoricSessionsToBridge() {
         let sessions = history
         guard !sessions.isEmpty else {
-            bridgeSyncStatus = "Keine Trainings vorhanden"
+            bridgeSyncStatus = .info(AppLanguage.current.ui("Keine Trainings vorhanden"))
             return
         }
 
-        bridgeSyncStatus = "Healthpit überträgt \(sessions.count) Trainings..."
+        bridgeSyncStatus = .info(
+            AppLanguage.current.ui(format: "Healthpit überträgt Trainings (%d)...", sessions.count)
+        )
         Task {
             do {
                 let summary = try await GymPitBridgeSyncService.shared.uploadAndReconcile(sessions)
                 await MainActor.run {
                     if summary.uploaded == 0 {
-                        bridgeSyncStatus = "Healthpit: keine neuen Trainings"
+                        bridgeSyncStatus = .info(AppLanguage.current.ui("Healthpit: keine neuen Trainings"))
                     } else {
-                        bridgeSyncStatus = "Healthpit \(bridgeSummaryText(summary))"
+                        bridgeSyncStatus = .info("Healthpit " + bridgeSummaryText(summary))
                     }
                 }
             } catch {
                 await MainActor.run {
-                    bridgeSyncStatus = "Healthpit Fehler: \(error.localizedDescription)"
+                    bridgeSyncStatus = .error(
+                        AppLanguage.current.ui(format: "Healthpit Fehler: %@", error.localizedDescription)
+                    )
                 }
             }
         }
@@ -1141,7 +1175,9 @@ final class WorkoutStore: ObservableObject {
 
     private func deleteSessionsFromBridge(_ sessions: [WorkoutSession]) {
         guard !sessions.isEmpty else { return }
-        bridgeSyncStatus = "Healthpit löscht \(sessions.count) Training\(sessions.count == 1 ? "" : "en")..."
+        bridgeSyncStatus = .info(
+            AppLanguage.current.ui(format: "Healthpit löscht Trainings (%d)...", sessions.count)
+        )
         Task {
             var failed = 0
             for session in sessions {
@@ -1153,8 +1189,8 @@ final class WorkoutStore: ObservableObject {
             }
             await MainActor.run {
                 bridgeSyncStatus = failed == 0
-                    ? "Healthpit: Löschung synchronisiert"
-                    : "Healthpit: \(failed) Löschung\(failed == 1 ? "" : "en") fehlgeschlagen"
+                    ? .info(AppLanguage.current.ui("Healthpit: Löschung synchronisiert"))
+                    : .error(AppLanguage.current.ui(format: "Healthpit: Löschungen fehlgeschlagen (%d)", failed))
             }
         }
     }
@@ -1222,7 +1258,7 @@ final class WorkoutStore: ObservableObject {
         if WorkoutHealthExporter.shared.isAuthorizedForAutomaticSave {
             exportSessionToHealth(session)
         } else {
-            healthExportStatus = "Apple Health nicht verbunden"
+            healthExportStatus = .info(AppLanguage.current.ui("Apple Health nicht verbunden"))
         }
         uploadSessionToBridge(session)
 
@@ -1669,62 +1705,76 @@ final class WorkoutStore: ObservableObject {
         if WorkoutHealthExporter.shared.isAuthorizedForAutomaticSave {
             exportSessionToHealth(session)
         } else {
-            healthExportStatus = "Apple Health nicht verbunden"
+            healthExportStatus = .info(AppLanguage.current.ui("Apple Health nicht verbunden"))
         }
         uploadSessionToBridge(session)
         return session
     }
 
     private func uploadSessionToBridge(_ session: WorkoutSession) {
-        bridgeSyncStatus = "Healthpit Export läuft..."
+        bridgeSyncStatus = .info(AppLanguage.current.ui("Healthpit Export läuft..."))
         Task {
             do {
                 let summary = try await GymPitBridgeSyncService.shared.upload(session)
                 await MainActor.run {
                     if summary.uploaded == 0 {
-                        bridgeSyncStatus = "Healthpit: schon übertragen"
+                        bridgeSyncStatus = .info(AppLanguage.current.ui("Healthpit: schon übertragen"))
                     } else {
-                        bridgeSyncStatus = "Healthpit \(bridgeSummaryText(summary))"
+                        bridgeSyncStatus = .info("Healthpit " + bridgeSummaryText(summary))
                     }
                 }
             } catch {
                 await MainActor.run {
-                    bridgeSyncStatus = "Healthpit Fehler: \(error.localizedDescription)"
+                    bridgeSyncStatus = .error(
+                        AppLanguage.current.ui(format: "Healthpit Fehler: %@", error.localizedDescription)
+                    )
                 }
             }
         }
     }
 
     private func bridgeSummaryText(_ summary: GymPitBridgeUploadSummary) -> String {
+        let language = AppLanguage.current
         var parts: [String] = []
         if summary.created > 0 {
-            parts.append("\(summary.created) neu")
+            parts.append(language.ui(format: "Neu: %d", summary.created))
         }
         if summary.updated > 0 {
-            parts.append("\(summary.updated) aktualisiert")
+            parts.append(language.ui(format: "Aktualisiert: %d", summary.updated))
         }
         if parts.isEmpty {
-            parts.append("\(summary.uploaded) übertragen")
+            parts.append(language.ui(format: "Übertragen: %d", summary.uploaded))
         }
 
-        parts.append("\(summary.exercises) Übungen")
-        parts.append("\(summary.sets) Sätze")
+        parts.append(language.ui(format: "Übungen: %d", summary.exercises))
+        parts.append(language.ui(format: "Sätze: %d", summary.sets))
         if summary.volumeKg > 0 {
-            parts.append("\(summary.volumeKg.formattedWeight(unit: .kilograms)) Volumen")
+            parts.append(
+                language.ui(format: "Volumen: %@", summary.volumeKg.formattedWeight(unit: .kilograms))
+            )
         }
         return parts.joined(separator: " · ")
     }
 
     private func exportSessionToHealth(_ session: WorkoutSession) {
-        healthExportStatus = "Apple Health Export läuft..."
+        healthExportStatus = .info(AppLanguage.current.ui("Apple Health Export läuft..."))
         saveSessionToHealthIfNeeded(session) { [weak self] result in
             switch result {
             case .success(.saved):
-                self?.healthExportStatus = "Übertragen: \(session.planName), \(Int(session.durationMinutes.rounded())) min, \(session.calories) kcal"
+                self?.healthExportStatus = .info(AppLanguage.current.ui(
+                    format: "Übertragen: %@, %d min, %d kcal",
+                    session.planName,
+                    Int(session.durationMinutes.rounded()),
+                    session.calories
+                ))
             case .success(.alreadyExists):
-                self?.healthExportStatus = "Bereits in Apple Health: \(session.planName)"
+                self?.healthExportStatus = .info(
+                    AppLanguage.current.ui(format: "Bereits in Apple Health: %@", session.planName)
+                )
             case .failure(let error):
-                self?.healthExportStatus = "Apple Health Fehler: \(error.localizedDescription)"
+                self?.healthExportStatus = .error(
+                    AppLanguage.current.ui(format: "Apple Health Fehler: %@", error.localizedDescription)
+                )
             }
         }
     }
@@ -1739,11 +1789,18 @@ final class WorkoutStore: ObservableObject {
         guard let session = sessions.first else {
             isHealthExportInProgress = false
             if failed > 0 {
-                healthExportStatus = "Fertig: \(completed) übertragen, \(skipped) bereits vorhanden, \(failed) Fehler"
+                healthExportStatus = .error(AppLanguage.current.ui(
+                    format: "Fertig: %d übertragen, %d bereits vorhanden, %d Fehler",
+                    completed, skipped, failed
+                ))
             } else if completed == 0 {
-                healthExportStatus = "Keine Duplikate angelegt: \(skipped) Workouts bereits vorhanden"
+                healthExportStatus = .info(AppLanguage.current.ui(
+                    format: "Keine Duplikate angelegt: %d Workouts bereits vorhanden", skipped
+                ))
             } else {
-                healthExportStatus = "Fertig: \(completed) übertragen, \(skipped) bereits vorhanden"
+                healthExportStatus = .info(AppLanguage.current.ui(
+                    format: "Fertig: %d übertragen, %d bereits vorhanden", completed, skipped
+                ))
             }
             return
         }
@@ -1754,7 +1811,9 @@ final class WorkoutStore: ObservableObject {
 
             switch result {
             case .success(.saved):
-                self?.healthExportStatus = "Apple Health: \(processed)/\(total) · \(completed + 1) übertragen"
+                self?.healthExportStatus = .info(AppLanguage.current.ui(
+                    format: "Apple Health: %d/%d · %d übertragen", processed, total, completed + 1
+                ))
                 self?.exportHistoricSessions(
                     remaining,
                     total: total,
@@ -1763,7 +1822,9 @@ final class WorkoutStore: ObservableObject {
                     failed: failed
                 )
             case .success(.alreadyExists):
-                self?.healthExportStatus = "Apple Health: \(processed)/\(total) · bereits vorhanden"
+                self?.healthExportStatus = .info(AppLanguage.current.ui(
+                    format: "Apple Health: %d/%d · bereits vorhanden", processed, total
+                ))
                 self?.exportHistoricSessions(
                     remaining,
                     total: total,
@@ -1772,7 +1833,9 @@ final class WorkoutStore: ObservableObject {
                     failed: failed
                 )
             case .failure:
-                self?.healthExportStatus = "Apple Health: \(processed)/\(total) · Fehler"
+                self?.healthExportStatus = .error(AppLanguage.current.ui(
+                    format: "Apple Health: %d/%d · Fehler", processed, total
+                ))
                 self?.exportHistoricSessions(
                     remaining,
                     total: total,
@@ -1817,21 +1880,25 @@ final class WorkoutStore: ObservableObject {
         guard let session = sessions.first else {
             if total > 0 {
                 if failed == 0 {
-                    healthExportStatus = "Aus Apple Health gelöscht (\(completed))"
+                    healthExportStatus = .info(
+                        AppLanguage.current.ui(format: "Aus Apple Health gelöscht (%d)", completed)
+                    )
                 } else {
-                    healthExportStatus = "\(completed) aus Apple Health gelöscht, \(failed) Fehler"
+                    healthExportStatus = .error(AppLanguage.current.ui(
+                        format: "Aus Apple Health gelöscht: %d, Fehler: %d", completed, failed
+                    ))
                 }
             }
             return
         }
 
         guard WorkoutHealthExporter.shared.isAuthorizedForAutomaticSave else {
-            healthExportStatus = "Apple Health nicht verbunden"
+            healthExportStatus = .info(AppLanguage.current.ui("Apple Health nicht verbunden"))
             return
         }
 
         if completed == 0 && failed == 0 {
-            healthExportStatus = "Apple Health Löschen läuft..."
+            healthExportStatus = .info(AppLanguage.current.ui("Apple Health Löschen läuft..."))
         }
 
         let remaining = Array(sessions.dropFirst())
