@@ -23,40 +23,20 @@ enum GymPitBridgeSettings {
     static let localConnectionEnabledKey = "gymPitBridgeLocalConnectionEnabled"
     static let localHostKey = "gymPitBridgeLocalHost"
     static let localPortKey = "gymPitBridgeLocalPort"
-    static let usernameKey = "gymPitBridgeUsername"
     static let deviceIDKey = "gymPitBridgeDeviceID"
 }
 
-struct GymPitBridgeSession: Decodable {
-    let sessionToken: String
-    let tokenType: String
-    let expiresAt: String
+/// Was nach dem Verbinden feststeht. Home Assistant stellt keine Sitzung aus —
+/// der Long-Lived Token ist die Anmeldung und laeuft nicht ab. Festgehalten
+/// wird nur, zu welchem Home-Assistant-Benutzer der Token gehoert; an ihm
+/// haengen drueben die Entitaeten.
+struct GymPitBridgeSession {
     let deviceName: String
     let username: String
-    let nodeRole: String
-    let serverRole: String
 
-    enum CodingKeys: String, CodingKey {
-        case sessionToken = "session_token"
-        case tokenType = "token_type"
-        case expiresAt = "expires_at"
-        case deviceName = "device_name"
-        case nodeRole = "node_role"
-        case serverRole = "server_role"
-        case username
-    }
-
-    /// Im Webhook-Modus stellt Home Assistant keine Sitzung aus — der
-    /// Long-Lived Token ist die Anmeldung. Die Oberfläche zeigt trotzdem
-    /// dieselbe Rückmeldung, deshalb wird hier eine gebaut.
-    init(homeAssistantToken: String, username: String) {
-        sessionToken = homeAssistantToken
-        tokenType = "bearer"
-        expiresAt = ""
+    init(username: String) {
         deviceName = "GymPit (iPhone)"
         self.username = username
-        nodeRole = "slave"
-        serverRole = "master"
     }
 }
 
@@ -291,7 +271,6 @@ private extension GymPitBridgeWorkoutImportResult {
 
 private struct GymPitBridgeCredentials {
     let baseURL: URL
-    let username: String
     let authToken: String
     let deviceID: String
 
@@ -383,10 +362,7 @@ final class GymPitBridgeSyncService {
         }
 
         let status = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-        return GymPitBridgeSession(
-            homeAssistantToken: token,
-            username: status?["user"] as? String ?? ""
-        )
+        return GymPitBridgeSession(username: status?["user"] as? String ?? "")
     }
 
     func disconnect() {
@@ -563,11 +539,9 @@ final class GymPitBridgeSyncService {
         }
 
         let baseURL = try await Self.configuredBaseURL(defaults: defaults)
-        // Der Benutzername wird nicht mehr mitgeschickt: Home Assistant leitet
-        // ihn aus dem Token ab.
+        // Kein Benutzername mehr: Home Assistant leitet ihn aus dem Token ab.
         return GymPitBridgeCredentials(
             baseURL: baseURL,
-            username: defaults.string(forKey: GymPitBridgeSettings.usernameKey) ?? "",
             authToken: token,
             deviceID: deviceID.isEmpty ? "GymPit" : deviceID
         )

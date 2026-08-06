@@ -98,4 +98,4 @@ Terminal `Config/Distribution/AppStoreUpload.plist` verwendet.
 - Altersfreigabe-Fragebogen
 - App-Privacy-Angaben passend zur Datenschutzerklärung
 - Review-Screenshot für jeden In-App-Kauf
-- TestFlight-Smoke-Test: Training, Pause/Benachrichtigung, Historie, CSV, Apple Health, Watch-Sync, Live Activity und alle vier Unterstützungsoptionen
+- TestFlight-Smoke-Test: Training, Pause/Benachrichtigung, Historie, CSV, Apple Health, Home-Assistant-Verbindung, Watch-Sync, Live Activity und alle vier Unterstützungsoptionen
