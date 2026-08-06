@@ -793,10 +793,10 @@ private struct SettingsView: View {
                 }
                 .disabled(store.history.isEmpty || store.isHealthExportInProgress)
 
-                if store.healthExportStatus != "Noch nicht übertragen" {
-                    Text(store.healthExportStatus)
+                if !store.healthExportStatus.isIdle {
+                    Text(store.healthExportStatus.text)
                         .font(.footnote)
-                        .foregroundStyle(store.healthExportStatus.contains("Fehler") ? Color.red : Color.secondary)
+                        .foregroundStyle(store.healthExportStatus.isError ? Color.red : Color.secondary)
                 }
             }
 
@@ -850,9 +850,11 @@ private struct SettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
-                Text(store.bridgeSyncStatus)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                if !store.bridgeSyncStatus.isIdle {
+                    Text(store.bridgeSyncStatus.text)
+                        .font(.footnote)
+                        .foregroundStyle(store.bridgeSyncStatus.isError ? Color.red : Color.secondary)
+                }
             }
         }
         .navigationTitle(appLanguage.ui("Daten / Schnittstellen"))

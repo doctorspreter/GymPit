@@ -28,12 +28,12 @@ Open `GymPit.xcodeproj` in Xcode and select the shared `GymPit` scheme.
 
 ## Home Assistant connection
 
-GymPit sends finished workouts straight to Home Assistant. There is no Docker
-container, no add-on, and no intermediate server.
+GymPit sends finished workouts straight to Home Assistant. The receiving end is
+the **Healthpit** custom integration, installed through HACS. It stores the
+workouts and creates the entities.
 
-The receiving end is the **Healthpit** custom integration, installed through
-HACS. It stores the workouts and creates the entities. In GymPit, the
-connection lives under **Settings ▸ Data / Interfaces ▸ Home Assistant**:
+In GymPit, the connection lives under
+**Settings ▸ Data / Interfaces ▸ Home Assistant**:
 
 1. Install the Healthpit integration in Home Assistant and add it under
    **Devices & services**.
