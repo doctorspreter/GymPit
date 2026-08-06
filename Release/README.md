@@ -1,19 +1,12 @@
 # Release-Artefakte
 
-## Aktueller Release
+Dieser Ordner nimmt lokale Build-Ergebnisse auf. Sein Inhalt gehoert nicht ins
+Repository und ist in `.gitignore` ausgenommen: Archive (`*.xcarchive`), der
+App-Store-Export samt `GymPit.ipa` und die darin enthaltenen
+Provisioning-Profile bleiben auf dem Rechner, auf dem gebaut wurde.
 
-`Current/GymPit-1.0.xcarchive` ist das aktuelle, lokal signierte
-Release-Archiv mit der finalen Bundle-ID `app.gympit`. Es wurde inklusive Live
-Activity und Apple-Watch-App erfolgreich als Version 1.0, Build 2 archiviert.
+Wie ein Archiv entsteht und wie es zu App Store Connect kommt, steht in
+`Docs/Release.md`.
 
-`Current/AppStoreExport/GymPit.ipa` ist der daraus erzeugte App-Store-Export.
-Er ist mit einem „Cloud Managed Apple Distribution“-Zertifikat und Store-
-Provisioning-Profilen für Haupt-App, Live Activity und Watch-App signiert. Die
-Datei wurde noch nicht zu App Store Connect hochgeladen.
-
-Der Release enthält ausschließlich die 68 gezeichneten Übungsillustrationen
-aus `Sources/GymPit/ExerciseDetailImages`. Die alten Strichgrafiken, ihr
-Generator und die damit erzeugten Release-Artefakte wurden entfernt.
-
-Für TestFlight `Current/GymPit-1.0.xcarchive` doppelklicken und in Xcodes
-Organizer „Distribute App > TestFlight & App Store > Upload“ wählen.
+Der Release enthaelt ausschliesslich die 68 gezeichneten Uebungsillustrationen
+aus `Sources/GymPit/ExerciseDetailImages`.

@@ -573,7 +573,6 @@ private struct SettingsView: View {
     @AppStorage(GymPitBridgeSettings.baseURLKey) private var bridgeBaseURL = ""
     @AppStorage(GymPitBridgeSettings.localHostKey) private var bridgeLocalHost = ""
     @AppStorage(GymPitBridgeSettings.localPortKey) private var bridgeLocalPort = HealthpitAPI.defaultPort
-    @AppStorage(GymPitBridgeSettings.usernameKey) private var bridgeUsername = ""
     @AppStorage(GymPitBridgeSettings.deviceIDKey) private var bridgeDeviceID = "GymPit"
     @State private var bodyWeight = 80.0
     @State private var minutesPerSet = 3.5
@@ -746,8 +745,7 @@ private struct SettingsView: View {
         [
             bridgeBaseURL,
             bridgeLocalHost,
-            bridgeLocalPort,
-            bridgeUsername
+            bridgeLocalPort
         ].joined(separator: "|")
     }
 
@@ -803,6 +801,10 @@ private struct SettingsView: View {
             }
 
             Section(appLanguage.ui("Home Assistant")) {
+                Text(appLanguage.ui("GymPit sendet direkt an Home Assistant. Dort muss die Integration Healthpit eingerichtet sein. Der Long-Lived Access Token stammt aus deinem Home-Assistant-Profil und ist die gesamte Anmeldung."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
                 TextField(appLanguage.ui("Lokale Adresse"), text: $bridgeLocalHost)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -827,7 +829,6 @@ private struct SettingsView: View {
                 }
                 .disabled(
                     isConnectingBridge ||
-                    bridgeUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                     requiredBridgeToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 )
 

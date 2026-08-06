@@ -20,7 +20,7 @@ Erstelle Routinen, passe Übungen und Geräteeinstellungen an und dokumentiere G
 
 Während des Trainings hält dich die Live Activity über den aktuellen Satz und die Pause auf dem Laufenden. Mit der Apple-Watch-App kannst du dein Training direkt am Handgelenk fortführen. Auf Wunsch speichert GymPit abgeschlossene Trainings in Apple Health.
 
-Deine Trainingsdaten bleiben standardmäßig lokal auf deinem Gerät. CSV-Export, Apple Health und eine selbst konfigurierte Healthpit-Verbindung werden nur verwendet, wenn du sie aktiv auswählst.
+Deine Trainingsdaten bleiben standardmäßig lokal auf deinem Gerät. CSV-Export, Apple Health und eine Verbindung zur eigenen Home-Assistant-Instanz werden nur verwendet, wenn du sie aktiv auswählst.
 
 GymPit ist kostenlos. Wer die Weiterentwicklung unterstützen möchte, kann freiwillig einen einmaligen Beitrag über Apple leisten.
 
@@ -34,4 +34,4 @@ Gesundheit und Fitness
 
 ## Review-Hinweise
 
-Für die Kernfunktionen ist kein Konto erforderlich. Apple Health und Healthpit sind optional. Die vier Produkte unter „Einstellungen > Unterstützen“ sind freiwillige Verbrauchsprodukte und schalten keine Funktionen frei. Die App bleibt unabhängig von einem Kauf vollständig nutzbar.
+Für die Kernfunktionen ist kein Konto erforderlich. Apple Health und die Verbindung zu einer selbst betriebenen Home-Assistant-Instanz sind optional. Die vier Produkte unter „Einstellungen > Unterstützen“ sind freiwillige Verbrauchsprodukte und schalten keine Funktionen frei. Die App bleibt unabhängig von einem Kauf vollständig nutzbar.
