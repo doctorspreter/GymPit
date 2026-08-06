@@ -7,6 +7,9 @@ import UniformTypeIdentifiers
 private enum AppLayout {
     static let cornerRadius: CGFloat = 8
     static let compactCornerRadius: CGFloat = cornerRadius
+    /// Apples Mindestgroesse fuer Tippziele. Die Satzfelder waren kleiner und
+    /// liessen sich mit dem Finger kaum treffen.
+    static let minimumTapTarget: CGFloat = 44
 }
 
 private enum AppearanceMode: String, CaseIterable, Identifiable {
@@ -404,21 +407,18 @@ private struct TrainingView: View {
                 }
                 .contentMargins(.top, 4, for: .scrollContent)
                 .listSectionSpacing(.compact)
-                .scrollDismissesKeyboard(.interactively)
+                // Die Tastatur schliesst ueber Scrollen statt ueber eine
+                // Tastatur-Toolbar: die legte ein bildschirmbreites, unsichtbares
+                // Band ueber die Liste und verschluckte dort jeden Tap, genau auf
+                // Hoehe der dritten Satzzeile. Und nicht ".interactively", sonst
+                // greift die Scrollgeste schon nach wenigen Punkt Fingerbewegung.
+                .scrollDismissesKeyboard(.immediately)
                 .background(currentDesign.pageBackground)
                 .safeAreaInset(edge: .top, spacing: 0) {
                     StickyRestTimerInset(timerState: store.restTimerState)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(appLanguage.ui("Fertig")) {
-                        UIApplication.shared.endEditing()
-                    }
-                }
-            }
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
                 store.tickRestTimer()
             }
@@ -2133,13 +2133,10 @@ private struct ManualWorkoutEntryView: View {
                 }
                 .disabled(!canSave)
             }
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button(appLanguage.ui("Fertig")) {
-                    UIApplication.shared.endEditing()
-                }
-            }
         }
+        // Wie im Training: keine Tastatur-Toolbar ueber der Liste, sonst sind die
+        // Felder darunter nicht mehr antippbar.
+        .scrollDismissesKeyboard(.immediately)
         .sheet(isPresented: $isAddingExercise) {
             NavigationStack {
                 ManualWorkoutExercisePicker { exercise in
@@ -2440,7 +2437,7 @@ private struct ManualWorkoutSetEditor: View {
                 rpeMenu
             }
             .padding(.horizontal, 5)
-            .frame(height: 42)
+            .frame(height: AppLayout.minimumTapTarget + 8)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
@@ -2466,7 +2463,7 @@ private struct ManualWorkoutSetEditor: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            .frame(width: 38, height: 32)
+            .frame(width: 38, height: AppLayout.minimumTapTarget)
             .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -2479,7 +2476,7 @@ private struct ManualWorkoutSetEditor: View {
             Image(systemName: set.isLogged ? "checkmark.circle.fill" : "circle")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(set.isLogged ? .green : .secondary)
-                .frame(width: 26, height: 32)
+                .frame(width: 26, height: AppLayout.minimumTapTarget)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(appLanguage.ui("Satz")) \(index + 1) \(appLanguage.ui(set.isLogged ? "Nicht gemacht" : "Erfasst"))")
@@ -2507,7 +2504,7 @@ private struct ManualWorkoutSetEditor: View {
             Text(set.rpe == 0 ? "RPE" : "RPE \(set.rpe)")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.primary)
-                .frame(minWidth: 46, minHeight: 32)
+                .frame(minWidth: 46, minHeight: AppLayout.minimumTapTarget)
                 .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -2997,7 +2994,30 @@ private struct MuscleDistributionEditor: View {
 }
 
 private func formattedWeightInput(_ value: Double, unit: WeightUnit = .current) -> String {
-    unit.displayValue(fromKilograms: value).formatted(.number.precision(.fractionLength(2)))
+    // Keine erzwungenen zwei Nachkommastellen: "60" statt "60,00", damit der
+    // Wert in das schmale Satzfeld passt und nicht abgeschnitten wird.
+    unit.displayValue(fromKilograms: value).formatted(.number.precision(.fractionLength(0...2)))
+}
+
+/// Tippgeste fuer die Satzfelder. `onTapGesture` bricht ab, sobald der Finger
+/// ein paar Punkt wandert, und die Scrollgeste der Liste schluckt den Tap dann
+/// ganz. Diese Geste toleriert die uebliche Fingerbewegung und laesst echtes
+/// Scrollen (groessere Strecke) weiterhin durch.
+private func setFieldTapGesture(perform action: @escaping () -> Void) -> some Gesture {
+    DragGesture(minimumDistance: 0)
+        .onEnded { value in
+            let slop: CGFloat = 12
+            guard abs(value.translation.width) < slop, abs(value.translation.height) < slop else { return }
+            action()
+        }
+}
+
+/// Markiert den Inhalt des gerade fokussierten Feldes, damit die erste Ziffer
+/// den alten Wert ersetzt statt an ihn anzuhaengen.
+private func selectAllTextWhenFocused() {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
+    }
 }
 
 private func parsedWeightInput(_ text: String, fallback: Double = 0, unit: WeightUnit = .current) -> Double {
@@ -4993,7 +5013,7 @@ private struct SetRow: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
-                    .frame(width: 38, height: 32)
+                    .frame(width: 38, height: AppLayout.minimumTapTarget)
                     .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -5004,7 +5024,7 @@ private struct SetRow: View {
                     Image(systemName: set.isLogged ? "checkmark.circle.fill" : "circle")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(set.isLogged ? .green : .secondary)
-                        .frame(width: 26, height: 32)
+                        .frame(width: 26, height: AppLayout.minimumTapTarget)
                 }
                 .buttonStyle(.plain)
 
@@ -5050,13 +5070,13 @@ private struct SetRow: View {
                     Text(rpe.map { "RPE \($0)" } ?? "RPE")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.primary)
-                        .frame(minWidth: 46, minHeight: 32)
+                        .frame(minWidth: 46, minHeight: AppLayout.minimumTapTarget)
                         .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 5)
-            .frame(height: 42)
+            .frame(height: AppLayout.minimumTapTarget + 8)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
@@ -5151,11 +5171,17 @@ private struct FocusedSetInputField<FocusValue: Hashable>: View {
                 .focused($focusedField, equals: focusValue)
                 .onSubmit(onSubmit)
         }
-        .padding(.horizontal, isCompact ? 4 : 6)
+        .padding(.horizontal, isCompact ? 6 : 8)
         .padding(.vertical, isCompact ? 4 : 7)
-        .frame(height: isCompact ? 32 : nil)
+        .frame(minHeight: AppLayout.minimumTapTarget)
         .standardFieldFrame(cornerRadius: isCompact ? AppLayout.cornerRadius - 2 : AppLayout.cornerRadius)
+        // Das ganze Kaestchen ist Tippziel, nicht nur der schmale Textbereich.
         .contentShape(Rectangle())
+        .simultaneousGesture(setFieldTapGesture { focusedField = focusValue })
+        .onChange(of: focusedField) { _, newValue in
+            guard newValue == focusValue else { return }
+            selectAllTextWhenFocused()
+        }
     }
 }
 
@@ -5168,12 +5194,21 @@ private struct SetInputField: View {
     var isCompact = false
     let onSubmit: () -> Void
 
+    @FocusState private var isFocused: Bool
+
     var body: some View {
         content
-            .padding(.horizontal, isCompact ? 4 : 6)
+            .padding(.horizontal, isCompact ? 6 : 8)
             .padding(.vertical, isCompact ? 4 : 7)
-            .frame(height: isCompact ? 32 : nil)
+            .frame(minHeight: AppLayout.minimumTapTarget)
             .standardFieldFrame(cornerRadius: isCompact ? AppLayout.cornerRadius - 2 : AppLayout.cornerRadius)
+            // Das ganze Kaestchen ist Tippziel, nicht nur der schmale Textbereich.
+            .contentShape(Rectangle())
+            .simultaneousGesture(setFieldTapGesture { isFocused = true })
+            .onChange(of: isFocused) { _, newValue in
+                guard newValue else { return }
+                selectAllTextWhenFocused()
+            }
     }
 
     private var content: some View {
@@ -5195,6 +5230,7 @@ private struct SetInputField: View {
                 .textFieldStyle(.plain)
                 .multilineTextAlignment(.trailing)
                 .frame(width: width)
+                .focused($isFocused)
                 .onSubmit(onSubmit)
         }
     }
@@ -6434,12 +6470,6 @@ private struct EmptyPlanView: View {
 
     private var appLanguage: AppLanguage {
         AppLanguage.value(for: appLanguageRawValue)
-    }
-}
-
-private extension UIApplication {
-    func endEditing() {
-        sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
