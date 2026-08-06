@@ -90,6 +90,35 @@ Der lokale Export erzeugt
 einen direkten Upload wird im Organizer „TestFlight & App Store“ oder im
 Terminal `Config/Distribution/AppStoreUpload.plist` verwendet.
 
+## Änderungen nach 1.0
+
+### Satzfelder wieder zuverlässig antippbar (06.08.2026)
+
+Im laufenden Training liess sich das Gewicht eines Satzes oft nicht antippen –
+typischerweise beim dritten Satz. Erst „Fertig“ und ein zweiter Versuch
+funktionierten. Ursachen und Behebung in `Sources/GymPit/ContentView.swift`:
+
+- Die Tastatur-Toolbar (`ToolbarItemGroup(placement: .keyboard)`) legte ein
+  bildschirmbreites, unsichtbares Band ueber die Liste und verschluckte dort
+  jeden Tap. Genau darunter lag die dritte Satzzeile. Die Toolbar ist entfernt,
+  die Tastatur schliesst jetzt ueber Scrollen.
+- `scrollDismissesKeyboard` steht auf `.immediately` statt `.interactively`;
+  bei `.interactively` griff die Scrollgeste bei offener Tastatur nach jeder
+  kleinen Abwaertsbewegung und fing Taps ab.
+- Tippziel ist jetzt das ganze Feldkaestchen mit mindestens 44 pt Hoehe statt
+  nur des schmalen Textbereichs; die Geste toleriert die uebliche
+  Fingerbewegung.
+- Beim Fokussieren wird der Feldinhalt markiert, die erste Ziffer ersetzt also
+  den alten Wert, statt an ihn anzuhaengen (aus `60,00` plus `5` wurde vorher
+  `60,005`).
+- Gewichte werden ohne erzwungene zwei Nachkommastellen angezeigt (`60` statt
+  `60,00`), damit der Wert ins Feld passt.
+
+Geprueft im Simulator (iPhone 17 Pro, iOS 26.5): Wechsel zwischen allen drei
+Satzfeldern, auch mit unpraezisen Taps. Der Sheet „Training nachtragen“ nutzt
+dieselben Felder und wurde mitgeaendert, aber nur kompiliert, nicht manuell
+durchgeklickt.
+
 ## Pflichtangaben vor Einreichung
 
 - Öffentliche URL für die vorbereitete Datenschutzerklärung aus `Docs/AppStore/Datenschutz.md`
