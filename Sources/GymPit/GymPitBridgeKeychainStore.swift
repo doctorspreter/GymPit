@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum GymPitBridgeKeychainStore {
-    private static let service = "GymPit.Healthpit"
+    private static let service = "GymPit.HealthPit"
     private static let legacyService = ["GymPit", "Health" + "App" + "Bridge"].joined(separator: ".")
 
     static func string(for key: String) -> String {

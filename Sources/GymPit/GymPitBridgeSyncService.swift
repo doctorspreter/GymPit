@@ -291,13 +291,13 @@ enum GymPitBridgeSyncError: LocalizedError {
         let language = AppLanguage.current
         switch self {
         case .missingURL:
-            return language.ui("Healthpit-Adresse fehlt.")
+            return language.ui("HealthPit-Adresse fehlt.")
         case .missingToken:
-            return language.ui("Healthpit-Token fehlt.")
+            return language.ui("HealthPit-Token fehlt.")
         case .invalidURL:
-            return language.ui("Healthpit-Adresse ist ungültig.")
+            return language.ui("HealthPit-Adresse ist ungültig.")
         case .serverRejected(let code):
-            return language.ui(format: "Healthpit hat die Übertragung abgelehnt (%d).", code)
+            return language.ui(format: "HealthPit hat die Übertragung abgelehnt (%d).", code)
         case .serverMessage(let message):
             // Bereits uebersetzt, wo die Meldung entsteht.
             return message
@@ -354,7 +354,7 @@ final class GymPitBridgeSyncService {
             }
             if statusCode == 404 {
                 throw GymPitBridgeSyncError.serverMessage(AppLanguage.current.ui(
-                    "Home Assistant antwortet, aber die Healthpit-Integration ist dort nicht eingerichtet."
+                    "Home Assistant antwortet, aber die HealthPit-Integration ist dort nicht eingerichtet."
                 ))
             }
             if let message = Self.bridgeErrorMessage(from: data, statusCode: statusCode) {
@@ -572,7 +572,7 @@ final class GymPitBridgeSyncService {
         guard let baseURL = URL(string: baseURLText) else { throw GymPitBridgeSyncError.invalidURL }
         guard baseURL.scheme?.lowercased() == "https" else {
             throw GymPitBridgeSyncError.serverMessage(
-                AppLanguage.current.ui("Bitte die externe Healthpit-Adresse mit https:// eintragen.")
+                AppLanguage.current.ui("Bitte die externe HealthPit-Adresse mit https:// eintragen.")
             )
         }
         return baseURL
@@ -656,7 +656,7 @@ final class GymPitBridgeSyncService {
         // Die Integration nennt den Grund "error", aeltere Gegenstellen "detail".
         let detail = (object["detail"] as? String) ?? (object["error"] as? String) ?? ""
         guard !detail.isEmpty else { return nil }
-        return AppLanguage.current.ui(format: "Healthpit hat abgelehnt (%d): %@", statusCode, detail)
+        return AppLanguage.current.ui(format: "HealthPit hat abgelehnt (%d): %@", statusCode, detail)
     }
 
     private static func trimmedKeychainValue(for key: String) -> String {
@@ -669,7 +669,7 @@ final class GymPitBridgeSyncService {
 private extension GymPitBridgeImportedWorkoutPayload {
     init(session: WorkoutSession) {
         id = session.id.uuidString
-        source = "GymPit"
+        source = "gympit"
         sport = "strength_training"
         title = session.planName
         start = session.startDate

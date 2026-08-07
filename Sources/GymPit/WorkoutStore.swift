@@ -436,7 +436,7 @@ final class WorkoutStore: ObservableObject {
         .idle(AppLanguage.current.ui("Noch nicht übertragen"))
     @Published private(set) var isHealthExportInProgress = false
     @Published private(set) var bridgeSyncStatus: StatusMessage =
-        .idle(AppLanguage.current.ui("Healthpit nicht übertragen"))
+        .idle(AppLanguage.current.ui("HealthPit nicht übertragen"))
 
     private var isSyncingRoutine = false
     private var healthExportedSessionIDs: Set<UUID> = []
@@ -1119,22 +1119,22 @@ final class WorkoutStore: ObservableObject {
         }
 
         bridgeSyncStatus = .info(
-            AppLanguage.current.ui(format: "Healthpit überträgt Trainings (%d)...", sessions.count)
+            AppLanguage.current.ui(format: "HealthPit überträgt Trainings (%d)...", sessions.count)
         )
         Task {
             do {
                 let summary = try await GymPitBridgeSyncService.shared.uploadAndReconcile(sessions)
                 await MainActor.run {
                     if summary.uploaded == 0 {
-                        bridgeSyncStatus = .info(AppLanguage.current.ui("Healthpit: keine neuen Trainings"))
+                        bridgeSyncStatus = .info(AppLanguage.current.ui("HealthPit: keine neuen Trainings"))
                     } else {
-                        bridgeSyncStatus = .info("Healthpit " + bridgeSummaryText(summary))
+                        bridgeSyncStatus = .info("HealthPit " + bridgeSummaryText(summary))
                     }
                 }
             } catch {
                 await MainActor.run {
                     bridgeSyncStatus = .error(
-                        AppLanguage.current.ui(format: "Healthpit Fehler: %@", error.localizedDescription)
+                        AppLanguage.current.ui(format: "HealthPit Fehler: %@", error.localizedDescription)
                     )
                 }
             }
@@ -1176,7 +1176,7 @@ final class WorkoutStore: ObservableObject {
     private func deleteSessionsFromBridge(_ sessions: [WorkoutSession]) {
         guard !sessions.isEmpty else { return }
         bridgeSyncStatus = .info(
-            AppLanguage.current.ui(format: "Healthpit löscht Trainings (%d)...", sessions.count)
+            AppLanguage.current.ui(format: "HealthPit löscht Trainings (%d)...", sessions.count)
         )
         Task {
             var failed = 0
@@ -1189,8 +1189,8 @@ final class WorkoutStore: ObservableObject {
             }
             await MainActor.run {
                 bridgeSyncStatus = failed == 0
-                    ? .info(AppLanguage.current.ui("Healthpit: Löschung synchronisiert"))
-                    : .error(AppLanguage.current.ui(format: "Healthpit: Löschungen fehlgeschlagen (%d)", failed))
+                    ? .info(AppLanguage.current.ui("HealthPit: Löschung synchronisiert"))
+                    : .error(AppLanguage.current.ui(format: "HealthPit: Löschungen fehlgeschlagen (%d)", failed))
             }
         }
     }
@@ -1712,21 +1712,21 @@ final class WorkoutStore: ObservableObject {
     }
 
     private func uploadSessionToBridge(_ session: WorkoutSession) {
-        bridgeSyncStatus = .info(AppLanguage.current.ui("Healthpit Export läuft..."))
+        bridgeSyncStatus = .info(AppLanguage.current.ui("HealthPit Export läuft..."))
         Task {
             do {
                 let summary = try await GymPitBridgeSyncService.shared.upload(session)
                 await MainActor.run {
                     if summary.uploaded == 0 {
-                        bridgeSyncStatus = .info(AppLanguage.current.ui("Healthpit: schon übertragen"))
+                        bridgeSyncStatus = .info(AppLanguage.current.ui("HealthPit: schon übertragen"))
                     } else {
-                        bridgeSyncStatus = .info("Healthpit " + bridgeSummaryText(summary))
+                        bridgeSyncStatus = .info("HealthPit " + bridgeSummaryText(summary))
                     }
                 }
             } catch {
                 await MainActor.run {
                     bridgeSyncStatus = .error(
-                        AppLanguage.current.ui(format: "Healthpit Fehler: %@", error.localizedDescription)
+                        AppLanguage.current.ui(format: "HealthPit Fehler: %@", error.localizedDescription)
                     )
                 }
             }

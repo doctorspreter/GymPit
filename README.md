@@ -29,13 +29,13 @@ Open `GymPit.xcodeproj` in Xcode and select the shared `GymPit` scheme.
 ## Home Assistant connection
 
 GymPit sends finished workouts straight to Home Assistant. The receiving end is
-the **Healthpit** custom integration, installed through HACS. It stores the
+the **HealthPit** custom integration, installed through HACS. It stores the
 workouts and creates the entities.
 
 In GymPit, the connection lives under
 **Settings ▸ Data / Interfaces ▸ Home Assistant**:
 
-1. Install the Healthpit integration in Home Assistant and add it under
+1. Install the HealthPit integration in Home Assistant and add it under
    **Devices & services**.
 2. Create a **long-lived access token** in your Home Assistant profile.
 3. Enter the local address (and port, `8123` by default), optionally an
