@@ -801,7 +801,7 @@ private struct SettingsView: View {
             }
 
             Section(appLanguage.ui("Home Assistant")) {
-                Text(appLanguage.ui("GymPit sendet direkt an Home Assistant. Dort muss die Integration Healthpit eingerichtet sein. Der Long-Lived Access Token stammt aus deinem Home-Assistant-Profil und ist die gesamte Anmeldung."))
+                Text(appLanguage.ui("GymPit sendet direkt an Home Assistant. Dort muss die Integration HealthPit eingerichtet sein. Der Long-Lived Access Token stammt aus deinem Home-Assistant-Profil und ist die gesamte Anmeldung."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
@@ -825,7 +825,7 @@ private struct SettingsView: View {
                 Button {
                     connectBridge()
                 } label: {
-                    Label(appLanguage.ui("Healthpit verbinden"), systemImage: "link")
+                    Label(appLanguage.ui("HealthPit verbinden"), systemImage: "link")
                 }
                 .disabled(
                     isConnectingBridge ||
@@ -842,7 +842,7 @@ private struct SettingsView: View {
                 Button {
                     store.uploadAllHistoricSessionsToBridge()
                 } label: {
-                    Label(appLanguage.ui("Alle Trainings zu Healthpit übertragen"), systemImage: "arrow.up.heart")
+                    Label(appLanguage.ui("Alle Trainings zu HealthPit übertragen"), systemImage: "arrow.up.heart")
                 }
                 .disabled(store.history.isEmpty)
 
@@ -955,7 +955,7 @@ private struct SettingsView: View {
             }
 
             Section(appLanguage.ui("Datenschutz und Kosten")) {
-                Text(appLanguage.ui("Die App ist kostenlos. Sie speichert keine Daten auf einem fremden Server und braucht kein Konto. Deine Trainingsdaten bleiben lokal auf deinem Gerät, außer du exportierst sie oder verbindest freiwillig Apple Health beziehungsweise Healthpit."))
+                Text(appLanguage.ui("Die App ist kostenlos. Sie speichert keine Daten auf einem fremden Server und braucht kein Konto. Deine Trainingsdaten bleiben lokal auf deinem Gerät, außer du exportierst sie oder verbindest freiwillig Apple Health beziehungsweise HealthPit."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -983,20 +983,20 @@ private struct SettingsView: View {
 
     private func connectBridge() {
         isConnectingBridge = true
-        bridgeConnectionStatus = appLanguage.ui("Healthpit verbindet...")
+        bridgeConnectionStatus = appLanguage.ui("HealthPit verbindet...")
         Task {
             do {
                 _ = try await GymPitBridgeSyncService.shared.connect()
                 await MainActor.run {
                     isConnectingBridge = false
                     isBridgeConnected = true
-                    bridgeConnectionStatus = appLanguage.ui("Healthpit ist verbunden")
+                    bridgeConnectionStatus = appLanguage.ui("HealthPit ist verbunden")
                 }
             } catch {
                 await MainActor.run {
                     isConnectingBridge = false
                     refreshBridgeConnectionStatus()
-                    bridgeConnectionStatus = "\(appLanguage.ui("Healthpit Verbindung Fehler")): \(error.localizedDescription)"
+                    bridgeConnectionStatus = "\(appLanguage.ui("HealthPit Verbindung Fehler")): \(error.localizedDescription)"
                 }
             }
         }
@@ -1023,9 +1023,9 @@ private struct SettingsView: View {
         isBridgeConnected = service.hasSession
         // Ein Long-Lived Token laeuft nicht ab, es gibt also keine Restlaufzeit.
         if service.hasSession {
-            bridgeConnectionStatus = appLanguage.ui("Healthpit ist verbunden")
+            bridgeConnectionStatus = appLanguage.ui("HealthPit ist verbunden")
         } else {
-            bridgeConnectionStatus = appLanguage.ui("Healthpit ist nicht verbunden")
+            bridgeConnectionStatus = appLanguage.ui("HealthPit ist nicht verbunden")
         }
     }
 

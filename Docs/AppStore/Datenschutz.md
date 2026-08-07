@@ -20,7 +20,7 @@ Nur nach ausdrücklicher Freigabe kann GymPit abgeschlossene Trainings in Apple 
 
 ## Optionale Exporte und Verbindungen
 
-CSV- und Huawei-Watch-Dateien werden nur auf ausdrückliche Aktion erstellt oder importiert. Eine Verbindung zu Home Assistant wird nur aufgebaut, wenn eine eigene Serveradresse und ein Long-Lived Access Token eingetragen werden. Dann werden ausgewählte Trainingsdaten an diese vom Nutzer betriebene Home-Assistant-Instanz übertragen und dort von der Integration „Healthpit“ gespeichert. Der Betreiber der Instanz ist der Nutzer selbst; der Entwickler betreibt keinen Server und erhält keine Daten. Der Token wird im iOS-Schlüsselbund gespeichert.
+CSV- und Huawei-Watch-Dateien werden nur auf ausdrückliche Aktion erstellt oder importiert. Eine Verbindung zu Home Assistant wird nur aufgebaut, wenn eine eigene Serveradresse und ein Long-Lived Access Token eingetragen werden. Dann werden ausgewählte Trainingsdaten an diese vom Nutzer betriebene Home-Assistant-Instanz übertragen und dort von der Integration „HealthPit“ gespeichert. Der Betreiber der Instanz ist der Nutzer selbst; der Entwickler betreibt keinen Server und erhält keine Daten. Der Token wird im iOS-Schlüsselbund gespeichert.
 
 ## Freiwillige Unterstützung
 
