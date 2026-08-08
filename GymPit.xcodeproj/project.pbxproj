@@ -25,7 +25,6 @@
 		0A1B2C3D4E5F001001000207 /* WorkoutHealthExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000029 /* WorkoutHealthExporter.swift */; };
 		0A1B2C3D4E5F001001000208 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002A /* AppLanguage.swift */; };
 		0A1B2C3D4E5F001001000209 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002A /* AppLanguage.swift */; };
-		0A1B2C3D4E5F001001000210 /* HuaweiWatchSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002B /* HuaweiWatchSync.swift */; };
 		0A1B2C3D4E5F001001000211 /* GymPitSharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */; };
 		0A1B2C3D4E5F001001000212 /* GymPitSharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */; };
 		0A1B2C3D4E5F001001000213 /* PhoneWatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002D /* PhoneWatchConnectivityController.swift */; };
@@ -110,7 +109,6 @@
 		0A1B2C3D4E5F001001000028 /* GymPitLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GymPitLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A1B2C3D4E5F001001000029 /* WorkoutHealthExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHealthExporter.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F00100100002A /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
-		0A1B2C3D4E5F00100100002B /* HuaweiWatchSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HuaweiWatchSync.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPitSharedStorage.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F00100100002D /* PhoneWatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWatchConnectivityController.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F00100100002E /* GymPitBridgeSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPitBridgeSyncService.swift; sourceTree = "<group>"; };
@@ -164,7 +162,6 @@
 				0A1B2C3D4E5F001001000022 /* WorkoutLiveActivityController.swift */,
 				0A1B2C3D4E5F001001000029 /* WorkoutHealthExporter.swift */,
 				0A1B2C3D4E5F00100100002A /* AppLanguage.swift */,
-				0A1B2C3D4E5F00100100002B /* HuaweiWatchSync.swift */,
 				0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */,
 				0A1B2C3D4E5F00100100002D /* PhoneWatchConnectivityController.swift */,
 				0A1B2C3D4E5F00100100002E /* GymPitBridgeSyncService.swift */,
@@ -383,7 +380,6 @@
 				0A1B2C3D4E5F001001000202 /* WorkoutLiveActivityController.swift in Sources */,
 				0A1B2C3D4E5F001001000207 /* WorkoutHealthExporter.swift in Sources */,
 				0A1B2C3D4E5F001001000208 /* AppLanguage.swift in Sources */,
-				0A1B2C3D4E5F001001000210 /* HuaweiWatchSync.swift in Sources */,
 				0A1B2C3D4E5F001001000211 /* GymPitSharedStorage.swift in Sources */,
 				0A1B2C3D4E5F001001000213 /* PhoneWatchConnectivityController.swift in Sources */,
 				0A1B2C3D4E5F001001000214 /* GymPitBridgeSyncService.swift in Sources */,

@@ -1373,38 +1373,6 @@ final class WorkoutStore: ObservableObject {
         return data.base64EncodedString()
     }
 
-    func exportHuaweiWatchData() throws -> Data {
-        try HuaweiWatchSyncCodec.export(
-            plan: plan,
-            history: history,
-            restEndDate: GymPitSharedStorage.date(forKey: WorkoutPersistenceKeys.restEndDate)
-        )
-    }
-
-    func importHuaweiWatchData(_ data: Data) throws -> HuaweiWatchImportSummary {
-        let importedSessions = try HuaweiWatchSyncCodec.importSessions(from: data)
-        let existingIDs = Set(history.map(\.id))
-        let existingSignatures = Set(history.map(WorkoutCSVCodec.signature(for:)))
-
-        var newSessions: [WorkoutSession] = []
-        var skipped = 0
-
-        for session in importedSessions {
-            if existingIDs.contains(session.id) || existingSignatures.contains(WorkoutCSVCodec.signature(for: session)) {
-                skipped += 1
-            } else {
-                newSessions.append(session)
-            }
-        }
-
-        if !newSessions.isEmpty {
-            history.append(contentsOf: newSessions.map(sessionWithEstimatedCaloriesIfNeeded))
-            sortHistoryByPerformedDate()
-        }
-
-        return HuaweiWatchImportSummary(imported: newSessions.count, skipped: skipped, rows: importedSessions.count)
-    }
-
     func previousSessionExercise(for exercise: Exercise) -> WorkoutSessionExercise? {
         history
             .sorted { $0.date > $1.date }

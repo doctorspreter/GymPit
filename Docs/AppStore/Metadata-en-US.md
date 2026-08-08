@@ -28,9 +28,9 @@ connection, including set controls, rest timers, live heart rate, active
 calories, and duration. Finished sessions sync back to iPhone automatically.
 GymPit can optionally save completed workouts to Apple Health.
 
-Workout data stays on your device by default. CSV export, Apple Health, Huawei
-Watch files, and the connection to your own Home Assistant instance are used
-only when you choose to enable them.
+Workout data stays on your device by default. CSV export, Apple Health, and the
+connection to your own Home Assistant instance are used only when you choose to
+enable them.
 
 GymPit is free. You can support continued development with an optional one-time
 contribution processed by Apple.

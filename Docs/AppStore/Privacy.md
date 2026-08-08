@@ -28,12 +28,12 @@ revoked at any time in system settings.
 
 ## Optional exports and connections
 
-CSV and Huawei Watch files are created or imported only after an explicit user
-action. GymPit connects to Home Assistant only after the user provides an
-address and a long-lived access token. Selected workout data is then sent to the
-user-operated Home Assistant instance and stored by the HealthPit integration.
-The developer operates no server and receives none of this data. The token is
-stored in the iOS keychain.
+CSV files are created or imported only after an explicit user action. GymPit
+connects to Home Assistant only after the user provides an address and a
+long-lived access token. Selected workout data is then sent to the user-operated
+Home Assistant instance and stored by the HealthPit integration. The developer
+operates no server and receives none of this data. The token is stored in the
+iOS keychain.
 
 ## Voluntary support
 
