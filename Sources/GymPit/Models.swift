@@ -281,6 +281,44 @@ enum WeightUnit: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// Per-machine weight step. Always stored in kilograms so the value survives a
+/// unit switch, but offered to the user in whatever unit they currently use —
+/// a gym with pound plates picks 5 lb, a metric stack picks 2.5 kg.
+enum WeightIncrement {
+    static let defaultKilograms: Double = 2.5
+
+    /// Steps offered in the picker, expressed in the given display unit.
+    static func presets(for unit: WeightUnit) -> [Double] {
+        switch unit {
+        case .kilograms: [0.5, 1, 1.25, 2, 2.5, 5, 10, 20]
+        case .pounds: [1, 2.5, 5, 10, 20, 25, 45]
+        }
+    }
+
+    /// Presets converted to kilograms, ready to store.
+    static func presetKilograms(for unit: WeightUnit) -> [Double] {
+        presets(for: unit).map { unit.kilograms(fromDisplayValue: $0) }
+    }
+
+    static func sanitizedKilograms(_ value: Double) -> Double {
+        guard value.isFinite, value > 0 else { return defaultKilograms }
+        return min(50, value)
+    }
+
+    /// Matches a stored kilogram value against the preset list of `unit`,
+    /// tolerating the rounding error from the kg↔lb conversion.
+    static func matchingPresetKilograms(for value: Double, unit: WeightUnit) -> Double? {
+        presetKilograms(for: unit).first { abs($0 - value) < 0.005 }
+    }
+
+    /// Label for a stored kilogram value, e.g. "2,5 kg" or "5 lbs".
+    static func label(kilograms: Double, unit: WeightUnit) -> String {
+        let display = unit.displayValue(fromKilograms: kilograms)
+        let rounded = (display * 100).rounded() / 100
+        return "\(rounded.formatted(.number.precision(.fractionLength(0...2)))) \(unit.symbol)"
+    }
+}
+
 struct UserProfile: Codable, Equatable {
     var bodyWeightKilograms: Double
     var minutesPerSet: Double
@@ -372,6 +410,10 @@ struct Exercise: Codable, Identifiable, Equatable {
     var usesDedicatedDevice: Bool?
     var iconTemplateID: String?
     var shouldIncreaseWeightNextTime: Bool
+    /// Smallest weight change this machine actually allows, in kilograms.
+    /// Plate-loaded and pin-stack machines differ, so it is stored per exercise
+    /// and drives the +/- buttons on the watch.
+    var weightIncrement: Double
     var sets: [ExerciseSet]
 
     init(
@@ -391,6 +433,7 @@ struct Exercise: Codable, Identifiable, Equatable {
         usesDedicatedDevice: Bool? = nil,
         iconTemplateID: String? = nil,
         shouldIncreaseWeightNextTime: Bool = false,
+        weightIncrement: Double = WeightIncrement.defaultKilograms,
         sets: [ExerciseSet]
     ) {
         self.id = id
@@ -409,6 +452,7 @@ struct Exercise: Codable, Identifiable, Equatable {
         self.usesDedicatedDevice = usesDedicatedDevice
         self.iconTemplateID = iconTemplateID
         self.shouldIncreaseWeightNextTime = shouldIncreaseWeightNextTime
+        self.weightIncrement = WeightIncrement.sanitizedKilograms(weightIncrement)
         self.sets = sets
     }
 
@@ -429,6 +473,7 @@ struct Exercise: Codable, Identifiable, Equatable {
         case usesDedicatedDevice
         case iconTemplateID
         case shouldIncreaseWeightNextTime
+        case weightIncrement
         case sets
     }
 
@@ -452,6 +497,9 @@ struct Exercise: Codable, Identifiable, Equatable {
         usesDedicatedDevice = try container.decodeIfPresent(Bool.self, forKey: .usesDedicatedDevice)
         iconTemplateID = try container.decodeIfPresent(String.self, forKey: .iconTemplateID)
         shouldIncreaseWeightNextTime = try container.decodeIfPresent(Bool.self, forKey: .shouldIncreaseWeightNextTime) ?? false
+        weightIncrement = WeightIncrement.sanitizedKilograms(
+            try container.decodeIfPresent(Double.self, forKey: .weightIncrement) ?? WeightIncrement.defaultKilograms
+        )
         sets = try container.decode([ExerciseSet].self, forKey: .sets)
     }
 

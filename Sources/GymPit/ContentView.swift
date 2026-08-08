@@ -2940,6 +2940,47 @@ private struct WeightInputRow: View {
     }
 }
 
+/// Picks the weight step for one machine. The stored value is always
+/// kilograms; the options shown follow the unit the user works in, so a gym
+/// with pound plates gets 5 lb steps instead of a converted 2.27 kg.
+private struct WeightIncrementPicker: View {
+    @Binding var kilograms: Double
+    let appLanguage: AppLanguage
+    @AppStorage(WeightUnit.storageKey) private var weightUnitRawValue = WeightUnit.kilograms.rawValue
+
+    var body: some View {
+        Picker(appLanguage.ui("Schrittweite Gewicht"), selection: selection) {
+            ForEach(options, id: \.self) { option in
+                Text(WeightIncrement.label(kilograms: option, unit: weightUnit)).tag(option)
+            }
+        }
+        Text(appLanguage.ui("Legt fest, um wie viel die Plus- und Minus-Tasten auf der Apple Watch das Gewicht ändern."))
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+    }
+
+    /// Keeps a stored value that is not in the preset list selectable, so
+    /// switching units never silently rewrites the machine's step.
+    private var options: [Double] {
+        let presets = WeightIncrement.presetKilograms(for: weightUnit)
+        guard WeightIncrement.matchingPresetKilograms(for: kilograms, unit: weightUnit) == nil else {
+            return presets
+        }
+        return (presets + [kilograms]).sorted()
+    }
+
+    private var selection: Binding<Double> {
+        Binding(
+            get: { WeightIncrement.matchingPresetKilograms(for: kilograms, unit: weightUnit) ?? kilograms },
+            set: { kilograms = $0 }
+        )
+    }
+
+    private var weightUnit: WeightUnit {
+        WeightUnit.value(for: weightUnitRawValue)
+    }
+}
+
 private struct MuscleDistributionEditor: View {
     @Binding var shares: [MuscleDistributionShare]
     let appLanguage: AppLanguage
@@ -3110,6 +3151,7 @@ private struct ExercisePlanEditor: View {
     @State private var supersetGroup: Int
     @State private var isFavorite: Bool
     @State private var deviceSettings: DeviceSettings
+    @State private var weightIncrement: Double
 
     init(exercise: Exercise) {
         self.exercise = exercise
@@ -3125,6 +3167,7 @@ private struct ExercisePlanEditor: View {
         _supersetGroup = State(initialValue: exercise.supersetGroup ?? 0)
         _isFavorite = State(initialValue: exercise.isFavorite)
         _deviceSettings = State(initialValue: exercise.device.withoutDashPlaceholders)
+        _weightIncrement = State(initialValue: exercise.weightIncrement)
     }
 
     var body: some View {
@@ -3164,6 +3207,7 @@ private struct ExercisePlanEditor: View {
                 Stepper(value: $restSeconds, in: 0...300, step: 15) {
                     SettingsValueRow(title: appLanguage.ui("Pause nach Satz"), value: "\(restSeconds) s")
                 }
+                WeightIncrementPicker(kilograms: $weightIncrement, appLanguage: appLanguage)
                 Picker(appLanguage.ui("Superset"), selection: $supersetGroup) {
                     Text(appLanguage.ui("Kein Superset")).tag(0)
                     Text("\(appLanguage.ui("Superset")) A").tag(1)
@@ -3201,7 +3245,8 @@ private struct ExercisePlanEditor: View {
                         exercise,
                         restSeconds: restSeconds,
                         supersetGroup: supersetGroup == 0 ? nil : supersetGroup,
-                        isFavorite: isFavorite
+                        isFavorite: isFavorite,
+                        weightIncrement: weightIncrement
                     )
                     dismiss()
                 }
@@ -5692,6 +5737,7 @@ private struct DeviceExerciseEditorView: View {
     @State private var muscleDistribution: [MuscleDistributionShare]
     @State private var metValue: Double
     @State private var settings: DeviceSettings
+    @State private var weightIncrement: Double
 
     init(exercise: Exercise) {
         self.exercise = exercise
@@ -5700,6 +5746,7 @@ private struct DeviceExerciseEditorView: View {
         _muscleDistribution = State(initialValue: exercise.effectiveMuscleDistribution)
         _metValue = State(initialValue: exercise.metValue)
         _settings = State(initialValue: exercise.device.withoutDashPlaceholders)
+        _weightIncrement = State(initialValue: exercise.weightIncrement)
     }
 
     var body: some View {
@@ -5711,6 +5758,10 @@ private struct DeviceExerciseEditorView: View {
                 Stepper(value: $metValue, in: 1...12, step: 0.1) {
                     SettingsValueRow(title: "MET", value: metValue.formatted(.number.precision(.fractionLength(1))))
                 }
+            }
+
+            Section(appLanguage.ui("Gewicht")) {
+                WeightIncrementPicker(kilograms: $weightIncrement, appLanguage: appLanguage)
             }
 
             MuscleDistributionEditor(shares: $muscleDistribution, appLanguage: appLanguage)
@@ -5745,6 +5796,13 @@ private struct DeviceExerciseEditorView: View {
         )
         store.updateMuscleDistribution(exercise, shares: muscleDistribution)
         store.updateDevice(for: exercise, settings: settings)
+        store.updateExerciseOptions(
+            exercise,
+            restSeconds: exercise.restSeconds,
+            supersetGroup: exercise.supersetGroup,
+            isFavorite: exercise.isFavorite,
+            weightIncrement: weightIncrement
+        )
     }
 
     private var appLanguage: AppLanguage {

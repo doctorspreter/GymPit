@@ -993,11 +993,20 @@ final class WorkoutStore: ObservableObject {
         plan.exercises[index].notes = notes
     }
 
-    func updateExerciseOptions(_ exercise: Exercise, restSeconds: Int, supersetGroup: Int?, isFavorite: Bool) {
+    func updateExerciseOptions(
+        _ exercise: Exercise,
+        restSeconds: Int,
+        supersetGroup: Int?,
+        isFavorite: Bool,
+        weightIncrement: Double? = nil
+    ) {
         guard let index = plan.exercises.firstIndex(where: { $0.id == exercise.id }) else { return }
         plan.exercises[index].restSeconds = restSeconds
         plan.exercises[index].supersetGroup = supersetGroup
         plan.exercises[index].isFavorite = isFavorite
+        if let weightIncrement {
+            plan.exercises[index].weightIncrement = WeightIncrement.sanitizedKilograms(weightIncrement)
+        }
     }
 
     func toggleIncreaseWeightRecommendation(for exercise: Exercise) {

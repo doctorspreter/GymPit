@@ -14,8 +14,17 @@ All notable changes to GymPit are documented in this file.
   skipping rest timers, and switching between exercises.
 - Reliable deferred WatchConnectivity delivery when the iPhone is temporarily
   unavailable.
+- Per-machine weight step, configurable for every exercise under Device →
+  Weight. Presets follow the selected unit (0.5–20 kg or 1–45 lbs) and the
+  stored value survives a unit switch.
 
 ### Changed
+
+- Reworked the Apple Watch interface for legibility: solid cards instead of
+  translucent material on the black background, tappable exercise rows, larger
+  minimum tap targets, and readable contrast on the pause button.
+- The plus and minus buttons and the Digital Crown on Apple Watch now move the
+  weight by the machine's own step, snapping to the next reachable notch.
 
 - Finished Watch workouts now send their measured duration, active calories,
   HealthKit state, and workout identifier back to the iPhone history.
@@ -30,6 +39,10 @@ All notable changes to GymPit are documented in this file.
 - Rest-timer completion now provides haptic feedback on Apple Watch.
 - Watch commands are queued until connectivity is active instead of being
   silently dropped.
+- The set editor on Apple Watch no longer wraps its stepper labels across
+  several oversized lines, which made reps and weight unreadable and the
+  controls hard to hit.
+- The rest timer's skip button is no longer covered by the page indicator dots.
 
 ## [1.0] - 2026-08-06
 

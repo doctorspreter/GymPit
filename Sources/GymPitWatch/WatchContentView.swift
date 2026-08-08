@@ -1,5 +1,30 @@
 import SwiftUI
 
+// MARK: - Shared style
+
+private enum WatchStyle {
+    /// Solid card fill. `.thinMaterial` disappears on the OLED black background,
+    /// so cards use an explicit light overlay instead.
+    static let cardFill = Color.white.opacity(0.12)
+    static let cardFillStrong = Color.white.opacity(0.18)
+    static let cornerRadius: CGFloat = 12
+    /// Keeps scrollable content clear of the page indicator dots.
+    static let pageBottomInset: CGFloat = 20
+}
+
+private struct WatchCard<Content: View>: View {
+    var fill: Color = WatchStyle.cardFill
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .background(fill, in: RoundedRectangle(cornerRadius: WatchStyle.cornerRadius, style: .continuous))
+    }
+}
+
 struct WatchContentView: View {
     @EnvironmentObject private var store: WatchWorkoutStore
     private let language = AppLanguage.current
@@ -51,21 +76,20 @@ private struct ReadyWorkoutView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(language.ui("Bereit"))
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                        Text(plan.name)
-                            .font(.headline)
-                            .lineLimit(2)
-                    }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(language.ui("Bereit"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.green)
                     Spacer(minLength: 4)
                     ConnectionBadge(isReachable: store.isPhoneReachable)
                 }
 
-                HStack(spacing: 8) {
+                Text(plan.name)
+                    .font(.headline)
+                    .lineLimit(2)
+
+                HStack(spacing: 6) {
                     ReadyMetric(value: "\(plan.exercises.count)", title: language.ui("Übungen"))
                     ReadyMetric(value: "\(plan.exercises.reduce(0) { $0 + $1.sets.count })", title: language.ui("Sätze"))
                     ReadyMetric(value: "~\(plan.estimatedCalories)", title: "kcal")
@@ -76,7 +100,8 @@ private struct ReadyWorkoutView: View {
                     healthWorkout.startWorkout(named: plan.name)
                 } label: {
                     Label(language.ui("Training starten"), systemImage: "play.fill")
-                        .frame(maxWidth: .infinity)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 40)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.green)
@@ -85,9 +110,15 @@ private struct ReadyWorkoutView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
+                Text(language.ui("Übungen"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+
                 ExerciseQueue(exercises: plan.openExercises, currentExerciseID: plan.currentExerciseID)
             }
-            .padding(.horizontal, 2)
+            .padding(.horizontal, 4)
+            .padding(.bottom, 8)
         }
         .navigationTitle(language.ui("Training"))
     }
@@ -150,18 +181,20 @@ private struct WorkoutMetricsPage: View {
             VStack(spacing: 10) {
                 HStack {
                     Text(plan.name)
-                        .font(.headline)
+                        .font(.caption.weight(.semibold))
                         .lineLimit(1)
-                    Spacer()
+                    Spacer(minLength: 4)
                     ConnectionBadge(isReachable: store.isPhoneReachable)
                 }
 
                 Text(formattedDuration)
-                    .font(.system(.title, design: .rounded, weight: .semibold))
+                    .font(.system(size: 44, weight: .semibold, design: .rounded))
                     .monospacedDigit()
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
                     .foregroundStyle(.green)
 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     LiveMetric(
                         icon: "heart.fill",
                         color: .red,
@@ -176,11 +209,12 @@ private struct WorkoutMetricsPage: View {
                     )
                 }
 
-                VStack(spacing: 4) {
+                VStack(spacing: 5) {
                     HStack {
                         Text(plan.progressSummary(language: language))
-                        Spacer()
+                        Spacer(minLength: 4)
                         Text("\(Int((plan.progressFraction * 100).rounded())) %")
+                            .monospacedDigit()
                     }
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -198,7 +232,8 @@ private struct WorkoutMetricsPage: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 6)
+            .padding(.bottom, WatchStyle.pageBottomInset)
         }
     }
 
@@ -220,42 +255,56 @@ private struct CurrentExercisePage: View {
         ScrollView {
             VStack(spacing: 10) {
                 if let exercise = plan.activeExercise {
-                    HStack(spacing: 7) {
-                        Image(systemName: exercise.category.iconName)
-                            .foregroundStyle(.green)
-                        Text(exercise.localizedName(language: language))
-                            .font(.headline)
-                            .lineLimit(2)
-                        Spacer(minLength: 0)
+                    let isResting = store.restRemainingSeconds > 0
+                    // The rest timer owns the whole screen: dropping the header
+                    // is what keeps "Skip" clear of the page indicator dots.
+                    if !isResting {
+                        HStack(spacing: 6) {
+                            Image(systemName: exercise.category.iconName)
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                            Text(exercise.localizedName(language: language))
+                                .font(.headline)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.8)
+                            Spacer(minLength: 0)
+                        }
                     }
 
-                    if store.restRemainingSeconds > 0 {
+                    if isResting {
                         RestPanel(seconds: store.restRemainingSeconds)
                     } else if let set = exercise.sets.first(where: { !$0.isLogged }),
                               let index = exercise.sets.firstIndex(where: { $0.id == set.id }) {
-                        VStack(spacing: 5) {
-                            Text("\(language.ui("Satz")) \(index + 1)/\(exercise.sets.count)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text(setDescription(set))
-                                .font(.title3.weight(.semibold))
-                                .minimumScaleFactor(0.7)
-
-                            NavigationLink {
-                                SetEditorView(exercise: exercise, set: set)
-                            } label: {
-                                Label(language.ui("Anpassen"), systemImage: "slider.horizontal.3")
+                        VStack(spacing: 8) {
+                            WatchCard {
+                                VStack(spacing: 2) {
+                                    Text("\(language.ui("Satz")) \(index + 1)/\(exercise.sets.count)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                    Text(setDescription(set))
+                                        .font(.title3.weight(.semibold))
+                                        .minimumScaleFactor(0.6)
+                                        .lineLimit(1)
+                                }
                             }
-                            .buttonStyle(.bordered)
 
                             Button {
                                 store.completeNextSet()
                             } label: {
                                 Label(language.ui("Satz erledigt"), systemImage: "checkmark.circle.fill")
-                                    .frame(maxWidth: .infinity)
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity, minHeight: 40)
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(.green)
+
+                            NavigationLink {
+                                SetEditorView(exercise: exercise, set: set)
+                            } label: {
+                                Label(language.ui("Anpassen"), systemImage: "slider.horizontal.3")
+                                    .frame(maxWidth: .infinity, minHeight: 36)
+                            }
+                            .buttonStyle(.bordered)
                         }
                     }
 
@@ -272,7 +321,8 @@ private struct CurrentExercisePage: View {
                     )
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 6)
+            .padding(.bottom, WatchStyle.pageBottomInset)
         }
     }
 
@@ -288,40 +338,47 @@ private struct RestPanel: View {
     private let language = AppLanguage.current
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Text(language.ui("Pause"))
-                .font(.caption)
+                .font(.caption2.weight(.semibold))
                 .foregroundStyle(.orange)
             Text(String(format: "%d:%02d", seconds / 60, seconds % 60))
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .font(.system(size: 44, weight: .bold, design: .rounded))
                 .monospacedDigit()
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
                 .foregroundStyle(.orange)
 
-            HStack(spacing: 8) {
-                Button {
-                    store.addRestTime(-15)
-                } label: {
-                    Text("−15")
-                }
-                .buttonStyle(.bordered)
-
-                Button {
-                    store.addRestTime(15)
-                } label: {
-                    Text("+15")
-                }
-                .buttonStyle(.bordered)
+            HStack(spacing: 6) {
+                RestAdjustButton(title: "−15") { store.addRestTime(-15) }
+                RestAdjustButton(title: "+15") { store.addRestTime(15) }
             }
 
             Button {
                 store.skipRest()
             } label: {
                 Label(language.ui("Überspringen"), systemImage: "forward.fill")
-                    .frame(maxWidth: .infinity)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 38)
             }
             .buttonStyle(.borderedProminent)
             .tint(.orange)
         }
+    }
+}
+
+private struct RestAdjustButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.headline.monospacedDigit())
+                .frame(maxWidth: .infinity, minHeight: 36)
+        }
+        .buttonStyle(.bordered)
+        .tint(.orange)
     }
 }
 
@@ -334,7 +391,9 @@ private struct WorkoutQueuePage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 Text(language.ui("Übungen"))
-                    .font(.headline)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
                 ExerciseQueue(exercises: store.openExercises, currentExerciseID: plan.currentExerciseID)
 
                 if !plan.completedExercises.isEmpty {
@@ -343,7 +402,8 @@ private struct WorkoutQueuePage: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 6)
+            .padding(.bottom, WatchStyle.pageBottomInset)
         }
     }
 }
@@ -359,7 +419,8 @@ private struct WorkoutControlsPage: View {
         ScrollView {
             VStack(spacing: 10) {
                 Text(language.ui("Steuerung"))
-                    .font(.headline)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
                 if healthWorkout.hasLiveWorkout {
                     Button {
@@ -369,7 +430,9 @@ private struct WorkoutControlsPage: View {
                             healthWorkout.isPaused ? language.ui("Fortsetzen") : language.ui("Pausieren"),
                             systemImage: healthWorkout.isPaused ? "play.fill" : "pause.fill"
                         )
-                        .frame(maxWidth: .infinity)
+                        .font(.headline)
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity, minHeight: 40)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.yellow)
@@ -379,7 +442,7 @@ private struct WorkoutControlsPage: View {
                         healthWorkout.startWorkout(named: plan.name)
                     } label: {
                         Label(language.ui("Health-Aufzeichnung starten"), systemImage: "heart.fill")
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, minHeight: 40)
                     }
                     .buttonStyle(.bordered)
                     .tint(.red)
@@ -389,7 +452,8 @@ private struct WorkoutControlsPage: View {
                     confirmsEnd = true
                 } label: {
                     Label(language.ui("Training beenden"), systemImage: "stop.fill")
-                        .frame(maxWidth: .infinity)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 40)
                 }
                 .buttonStyle(.bordered)
 
@@ -408,24 +472,34 @@ private struct WorkoutControlsPage: View {
                         .multilineTextAlignment(.center)
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 6)
+            .padding(.bottom, WatchStyle.pageBottomInset)
         }
     }
 }
 
+// MARK: - Set editor
+
 private struct SetEditorView: View {
+    private enum Field: Hashable {
+        case reps
+        case weight
+    }
+
     @EnvironmentObject private var store: WatchWorkoutStore
     @Environment(\.dismiss) private var dismiss
     let exercise: Exercise
     let set: ExerciseSet
-    @State private var reps: Int
+    @State private var reps: Double
     @State private var displayWeight: Double
+    @FocusState private var focus: Field?
     private let language = AppLanguage.current
+    private let unit = WeightUnit.current
 
     init(exercise: Exercise, set: ExerciseSet) {
         self.exercise = exercise
         self.set = set
-        _reps = State(initialValue: set.reps)
+        _reps = State(initialValue: Double(set.reps))
         _displayWeight = State(initialValue: WeightUnit.current.displayValue(fromKilograms: set.weight))
     }
 
@@ -433,48 +507,161 @@ private struct SetEditorView: View {
         ScrollView {
             VStack(spacing: 10) {
                 Text(exercise.localizedName(language: language))
-                    .font(.headline)
-                    .lineLimit(2)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                Stepper(value: $reps, in: 1...999) {
-                    HStack {
-                        Text(language.ui("Wdh"))
-                        Spacer()
-                        Text("\(reps)")
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(.green)
-                    }
-                }
+                ValueTuner(
+                    title: language.ui("Wdh"),
+                    display: "\(Int(reps.rounded()))",
+                    isFocused: focus == .reps,
+                    onDecrement: { adjustReps(-1) },
+                    onIncrement: { adjustReps(1) }
+                )
+                .focusable()
+                .focused($focus, equals: .reps)
+                .digitalCrownRotation(
+                    $reps,
+                    from: 1,
+                    through: 999,
+                    by: 1,
+                    sensitivity: .medium,
+                    isContinuous: false,
+                    isHapticFeedbackEnabled: true
+                )
 
-                Stepper(value: $displayWeight, in: 0...9999, step: weightStep) {
-                    HStack {
-                        Text(WeightUnit.current.symbol)
-                        Spacer()
-                        Text(displayWeight.formatted(.number.precision(.fractionLength(0...1))))
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(.green)
-                    }
-                }
+                ValueTuner(
+                    title: unit.symbol,
+                    display: displayWeight.formatted(.number.precision(.fractionLength(0...2))),
+                    isFocused: focus == .weight,
+                    onDecrement: { adjustWeight(-weightStep) },
+                    onIncrement: { adjustWeight(weightStep) }
+                )
+                .focusable()
+                .focused($focus, equals: .weight)
+                .digitalCrownRotation(
+                    $displayWeight,
+                    from: 0,
+                    through: 9999,
+                    by: weightStep,
+                    sensitivity: .low,
+                    isContinuous: false,
+                    isHapticFeedbackEnabled: true
+                )
 
-                Button(language.ui("Übernehmen")) {
+                Text("\(language.ui("Schritt")) · \(WeightIncrement.label(kilograms: exercise.weightIncrement, unit: unit))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                Button {
                     store.updateCurrentSet(
-                        reps: reps,
-                        weight: WeightUnit.current.kilograms(fromDisplayValue: displayWeight)
+                        reps: Int(reps.rounded()),
+                        weight: unit.kilograms(fromDisplayValue: displayWeight)
                     )
                     dismiss()
+                } label: {
+                    Label(language.ui("Übernehmen"), systemImage: "checkmark")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 40)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.green)
             }
             .padding(.horizontal, 4)
+            .padding(.bottom, 8)
         }
         .navigationTitle(language.ui("Satz anpassen"))
+        .onAppear { focus = .reps }
     }
 
+    private func adjustReps(_ delta: Double) {
+        focus = .reps
+        reps = min(999, max(1, (reps + delta).rounded()))
+    }
+
+    /// Moves to the next value the machine can be set to. A weight that sits
+    /// off the grid (say 57.5 on a 5 kg stack) snaps to 60 up / 55 down rather
+    /// than jumping a full step past the nearest notch.
+    private func adjustWeight(_ delta: Double) {
+        focus = .weight
+        let epsilon = weightStep / 100
+        let notches = delta > 0
+            ? ((displayWeight + epsilon) / weightStep).rounded(.down) + 1
+            : ((displayWeight - epsilon) / weightStep).rounded(.up) - 1
+        displayWeight = min(9999, max(0, notches * weightStep))
+    }
+
+    /// The machine's own step, converted into the unit shown. Both the ± buttons
+    /// and the Digital Crown use it, so the watch can only produce weights the
+    /// machine can actually be set to.
     private var weightStep: Double {
-        WeightUnit.current == .kilograms ? 0.5 : 1
+        let step = unit.displayValue(fromKilograms: exercise.weightIncrement)
+        return step > 0 ? step : 1
     }
 }
+
+/// Big centred value with a ± button on each side. Replaces `Stepper`, whose
+/// label wraps unreadably at watch widths.
+private struct ValueTuner: View {
+    let title: String
+    let display: String
+    let isFocused: Bool
+    let onDecrement: () -> Void
+    let onIncrement: () -> Void
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(isFocused ? Color.green : Color.secondary)
+                .lineLimit(1)
+
+            HStack(spacing: 6) {
+                TunerButton(icon: "minus", action: onDecrement)
+
+                Text(display)
+                    .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+
+                TunerButton(icon: "plus", action: onIncrement)
+            }
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: WatchStyle.cornerRadius, style: .continuous)
+                .fill(isFocused ? WatchStyle.cardFillStrong : WatchStyle.cardFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: WatchStyle.cornerRadius, style: .continuous)
+                .strokeBorder(isFocused ? Color.green : Color.clear, lineWidth: 2)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title) \(display)")
+    }
+}
+
+private struct TunerButton: View {
+    let icon: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.body.weight(.bold))
+                .frame(width: 38, height: 38)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .background(Color.white.opacity(0.22), in: Circle())
+    }
+}
+
+// MARK: - Queue
 
 private struct ExerciseQueue: View {
     @EnvironmentObject private var store: WatchWorkoutStore
@@ -483,33 +670,54 @@ private struct ExerciseQueue: View {
     private let language = AppLanguage.current
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(spacing: 6) {
             ForEach(exercises) { exercise in
+                let isCurrent = exercise.id == currentExerciseID
                 Button {
                     store.select(exercise)
                 } label: {
-                    HStack(spacing: 7) {
-                        Image(systemName: exercise.id == currentExerciseID ? "circle.inset.filled" : "circle")
-                            .font(.caption2)
-                            .foregroundStyle(exercise.id == currentExerciseID ? .green : .secondary)
+                    HStack(spacing: 8) {
+                        Image(systemName: isCurrent ? "circle.inset.filled" : "circle")
+                            .font(.caption)
+                            .foregroundStyle(isCurrent ? Color.green : Color.secondary)
+
                         VStack(alignment: .leading, spacing: 1) {
                             Text(exercise.localizedName(language: language))
-                                .font(.caption.weight(.semibold))
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.primary)
                                 .lineLimit(2)
+                                .multilineTextAlignment(.leading)
                             Text("\(exercise.completedSetsCount)/\(exercise.sets.count) \(language.ui("Sätze"))")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
+
                         Spacer(minLength: 0)
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                     }
-                    .contentShape(Rectangle())
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: WatchStyle.cornerRadius, style: .continuous)
+                            .fill(isCurrent ? Color.green.opacity(0.22) : WatchStyle.cardFill)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: WatchStyle.cornerRadius, style: .continuous)
+                            .strokeBorder(isCurrent ? Color.green : Color.clear, lineWidth: 1.5)
+                    )
+                    .contentShape(RoundedRectangle(cornerRadius: WatchStyle.cornerRadius, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .padding(.vertical, 5)
             }
         }
     }
 }
+
+// MARK: - Small pieces
 
 private struct LiveMetric: View {
     let icon: String
@@ -518,19 +726,21 @@ private struct LiveMetric: View {
     let unit: String
 
     var body: some View {
-        VStack(spacing: 2) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(color)
-            Text(value)
-                .font(.title3.weight(.semibold).monospacedDigit())
-            Text(unit)
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(.secondary)
+        WatchCard {
+            VStack(spacing: 2) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundStyle(color)
+                Text(value)
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                Text(unit)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 7)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -539,17 +749,19 @@ private struct ReadyMetric: View {
     let title: String
 
     var body: some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.headline.monospacedDigit())
-            Text(title)
-                .font(.system(size: 8))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+        WatchCard {
+            VStack(spacing: 2) {
+                Text(value)
+                    .font(.headline.monospacedDigit())
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                Text(title)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 7)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 
