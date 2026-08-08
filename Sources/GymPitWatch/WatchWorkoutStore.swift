@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import WatchKit
 
 @MainActor
 final class WatchWorkoutStore: NSObject, ObservableObject {
@@ -10,6 +11,7 @@ final class WatchWorkoutStore: NSObject, ObservableObject {
 
     private var restEndDate: Date?
     private var timer: Timer?
+    private var pendingMessages: [[String: Any]] = []
 
     override init() {
         super.init()
@@ -63,7 +65,31 @@ final class WatchWorkoutStore: NSObject, ObservableObject {
         mutatePlan { plan in
             completeNextSet(exerciseID: exerciseID, in: &plan)
         }
+        WKInterfaceDevice.current().play(.success)
         send(command: "completeNextSet", exerciseID: exerciseID)
+    }
+
+    func updateCurrentSet(reps: Int, weight: Double) {
+        guard let exercise = activeExercise,
+              let set = exercise.sets.first(where: { !$0.isLogged }) else { return }
+
+        let normalizedReps = max(1, min(999, reps))
+        let normalizedWeight = max(0, min(9999, weight))
+        mutatePlan { plan in
+            guard let exerciseIndex = plan.exercises.firstIndex(where: { $0.id == exercise.id }),
+                  let setIndex = plan.exercises[exerciseIndex].sets.firstIndex(where: { $0.id == set.id }) else { return }
+            plan.exercises[exerciseIndex].sets[setIndex].reps = normalizedReps
+            plan.exercises[exerciseIndex].sets[setIndex].weight = normalizedWeight
+        }
+        send(
+            command: "updateSet",
+            exerciseID: exercise.id,
+            additionalValues: [
+                "setID": set.id.uuidString,
+                "reps": normalizedReps,
+                "weight": normalizedWeight
+            ]
+        )
     }
 
     func skipRest() {
@@ -78,14 +104,35 @@ final class WatchWorkoutStore: NSObject, ObservableObject {
         send(command: "skipRest", exerciseID: exerciseID)
     }
 
-    func endWorkout() {
+    func addRestTime(_ seconds: Int) {
+        let baseDate = restEndDate.map { max($0, Date()) } ?? Date()
+        let adjustedDate = baseDate.addingTimeInterval(TimeInterval(seconds))
+        if adjustedDate > Date() {
+            restEndDate = adjustedDate
+            GymPitSharedStorage.set(adjustedDate, forKey: WorkoutPersistenceKeys.restEndDate)
+        } else {
+            restEndDate = nil
+            GymPitSharedStorage.set(nil as Date?, forKey: WorkoutPersistenceKeys.restEndDate)
+        }
+        updateRestRemaining()
+        send(command: "addRestTime", additionalValues: ["seconds": seconds])
+    }
+
+    func endWorkout(summary: WatchWorkoutSummary? = nil) {
         mutatePlan { plan in
             prepareForNextWorkout(&plan)
         }
         restEndDate = nil
         restRemainingSeconds = 0
         GymPitSharedStorage.set(nil as Date?, forKey: WorkoutPersistenceKeys.restEndDate)
-        send(command: "endWorkout")
+        var values: [String: Any] = [:]
+        if let summary {
+            values["durationSeconds"] = summary.durationSeconds
+            values["activeCalories"] = summary.activeCalories
+            values["healthWorkoutSaved"] = summary.wasSavedToHealth
+            values["workoutID"] = summary.workoutID?.uuidString
+        }
+        send(command: "endWorkout", additionalValues: values)
     }
 
     private func activateConnectivity() {
@@ -95,20 +142,45 @@ final class WatchWorkoutStore: NSObject, ObservableObject {
         session.activate()
     }
 
-    private func send(command: String, exerciseID: UUID? = nil) {
+    private func send(
+        command: String,
+        exerciseID: UUID? = nil,
+        additionalValues: [String: Any] = [:]
+    ) {
         guard WCSession.isSupported() else { return }
-        var message: [String: Any] = ["command": command]
+        var message: [String: Any] = [
+            "command": command,
+            "sentAt": Date().timeIntervalSince1970
+        ]
         if let exerciseID {
             message["exerciseID"] = exerciseID.uuidString
         }
+        additionalValues.forEach { message[$0.key] = $0.value }
 
         let session = WCSession.default
-        guard session.activationState == .activated else { return }
+        guard session.activationState == .activated else {
+            pendingMessages.append(message)
+            return
+        }
+        deliver(message, using: session)
+    }
+
+    private func deliver(_ message: [String: Any], using session: WCSession) {
         if session.isReachable {
-            session.sendMessage(message, replyHandler: nil, errorHandler: nil)
+            session.sendMessage(message, replyHandler: nil) { _ in
+                if session.activationState == .activated {
+                    session.transferUserInfo(message)
+                }
+            }
         } else {
             session.transferUserInfo(message)
         }
+    }
+
+    private func flushPendingMessages(using session: WCSession) {
+        let messages = pendingMessages
+        pendingMessages.removeAll()
+        messages.forEach { deliver($0, using: session) }
     }
 
     private func handleStatePayload(_ payload: [String: Any]) {
@@ -149,9 +221,13 @@ final class WatchWorkoutStore: NSObject, ObservableObject {
     }
 
     private func updateRestRemaining() {
+        let previousValue = restRemainingSeconds
         guard let restEndDate, restEndDate > Date() else {
             restRemainingSeconds = 0
             self.restEndDate = nil
+            if previousValue > 0 {
+                WKInterfaceDevice.current().play(.notification)
+            }
             return
         }
         restRemainingSeconds = Int(restEndDate.timeIntervalSinceNow.rounded(.up))
@@ -231,6 +307,9 @@ extension WatchWorkoutStore: WCSessionDelegate {
     ) {
         Task { @MainActor in
             isPhoneReachable = session.isReachable
+            if activationState == .activated {
+                flushPendingMessages(using: session)
+            }
             requestState()
             handleStatePayload(session.applicationContext)
         }

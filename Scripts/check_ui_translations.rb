@@ -83,10 +83,10 @@ failures = used_keys.uniq.sort.map do |key|
 end.compact
 
 if failures.empty?
-  puts "#{used_keys.uniq.length} UI-Schlüssel sind in allen #{EXPECTED_LANGUAGES.length} Zielsprachen vollständig."
+  puts "#{used_keys.uniq.length} UI keys are complete in all #{EXPECTED_LANGUAGES.length} target languages."
   exit 0
 end
 
-warn "Fehlende UI-Übersetzungen:"
+warn "Missing UI translations:"
 failures.each { |key, missing| warn "- #{key}: #{missing.join(', ')}" }
 exit 1

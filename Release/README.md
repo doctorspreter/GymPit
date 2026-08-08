@@ -1,12 +1,10 @@
-# Release-Artefakte
+# Release artifacts
 
-Dieser Ordner nimmt lokale Build-Ergebnisse auf. Sein Inhalt gehoert nicht ins
-Repository und ist in `.gitignore` ausgenommen: Archive (`*.xcarchive`), der
-App-Store-Export samt `GymPit.ipa` und die darin enthaltenen
-Provisioning-Profile bleiben auf dem Rechner, auf dem gebaut wurde.
+This directory stores local build output. Its contents are excluded by
+`.gitignore`: archives (`*.xcarchive`), the App Store export and `GymPit.ipa`,
+and embedded provisioning profiles remain on the machine that created them.
 
-Wie ein Archiv entsteht und wie es zu App Store Connect kommt, steht in
-`Docs/Release.md`.
+See `Docs/Release.md` for archive and App Store Connect instructions.
 
-Der Release enthaelt ausschliesslich die 68 gezeichneten Uebungsillustrationen
-aus `Sources/GymPit/ExerciseDetailImages`.
+Release builds include only the 68 original exercise illustrations from
+`Sources/GymPit/ExerciseDetailImages`.
