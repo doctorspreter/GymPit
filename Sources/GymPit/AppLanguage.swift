@@ -81,15 +81,15 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             ?? german
     }
 
-    /// Wie `ui`, nur mit Platzhaltern. Die Uebersetzungen tragen dieselben
-    /// Platzhalter in derselben Reihenfolge wie der deutsche Text.
+    /// Like `ui`, but for format strings. Every translation keeps the same
+    /// placeholders in the same order as the German source text.
     func ui(format german: String, _ arguments: CVarArg...) -> String {
         String(format: ui(german), arguments: arguments)
     }
 
-    // Statusmeldungen aus dem Store. Sie entstehen ausserhalb der View und
-    // wurden frueher als feste deutsche Zeichenketten gesetzt. Platzhalter
-    // stehen in jeder Sprache in derselben Reihenfolge wie im Deutschen.
+    // Store status messages are created outside the view. They used to be
+    // hard-coded in German. Every language keeps placeholders in the same
+    // order as the German source text.
     private static let statusTexts: [String: [AppLanguage: String]] = [
         "Home Assistant hat den Token abgelehnt. Bitte einen neuen Long-Lived Access Token eintragen.": [.english: "Home Assistant rejected the token. Please enter a new long-lived access token.", .french: "Home Assistant a refusé le jeton. Saisis un nouveau jeton d’accès longue durée.", .spanish: "Home Assistant rechazó el token. Introduce un nuevo token de acceso de larga duración.", .italian: "Home Assistant ha rifiutato il token. Inserisci un nuovo token di accesso a lunga durata.", .russian: "Home Assistant отклонил токен. Введите новый долгоживущий токен доступа.", .chinese: "Home Assistant 拒绝了该令牌。请输入新的长期访问令牌。", .japanese: "Home Assistantがトークンを拒否しました。新しい長期アクセストークンを入力してください。"],
         "Home Assistant antwortet, aber die HealthPit-Integration ist dort nicht eingerichtet.": [.english: "Home Assistant responds, but the HealthPit integration is not set up there.", .french: "Home Assistant répond, mais l’intégration HealthPit n’y est pas installée.", .spanish: "Home Assistant responde, pero la integración HealthPit no está configurada allí.", .italian: "Home Assistant risponde, ma l’integrazione HealthPit non è configurata.", .russian: "Home Assistant отвечает, но интеграция HealthPit там не настроена.", .chinese: "Home Assistant 有响应，但那里没有配置 HealthPit 集成。", .japanese: "Home Assistantは応答していますが、HealthPit統合が設定されていません。"],
@@ -140,10 +140,26 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         "Volumen: %@": [.english: "Volume: %@", .french: "Volume : %@", .spanish: "Volumen: %@", .italian: "Volume: %@", .russian: "Объём: %@", .chinese: "容量：%@", .japanese: "ボリューム: %@"],
     ]
 
-    // Ergänzungen und Korrekturen für Texte, die in der Oberfläche tatsächlich verwendet werden.
-    // Ein separater Block hält die historisch gewachsenen Tabellen darunter unverändert und
-    // erlaubt gezielte Ergänzungen einzelner Sprachen.
+    // Additions and corrections for strings that are currently used by the UI.
+    // Keeping them separate leaves the legacy tables below unchanged and makes
+    // targeted additions for individual languages easier.
     private static let uiTextCorrections: [String: [AppLanguage: String]] = [
+        "Anpassen": [.english: "Adjust", .french: "Ajuster", .spanish: "Ajustar", .italian: "Modifica", .russian: "Настроить", .chinese: "调整", .japanese: "調整"],
+        "Beende das Training, damit es gespeichert wird.": [.english: "End the workout to save it.", .french: "Termine l’entraînement pour l’enregistrer.", .spanish: "Finaliza el entrenamiento para guardarlo.", .italian: "Termina l’allenamento per salvarlo.", .russian: "Завершите тренировку, чтобы сохранить её.", .chinese: "结束训练后即可保存。", .japanese: "保存するにはワークアウトを終了してください。"],
+        "Fortsetzen": [.english: "Resume", .french: "Reprendre", .spanish: "Reanudar", .italian: "Riprendi", .russian: "Продолжить", .chinese: "继续", .japanese: "再開"],
+        "Health-Aufzeichnung aus": [.english: "Health recording off", .french: "Enregistrement Santé désactivé", .spanish: "Registro de Salud desactivado", .italian: "Registrazione Salute disattivata", .russian: "Запись в Apple Health выключена", .chinese: "健康记录已关闭", .japanese: "ヘルスケア記録オフ"],
+        "Health-Aufzeichnung starten": [.english: "Start Health recording", .french: "Démarrer l’enregistrement Santé", .spanish: "Iniciar registro de Salud", .italian: "Avvia registrazione Salute", .russian: "Начать запись в Apple Health", .chinese: "开始健康记录", .japanese: "ヘルスケア記録を開始"],
+        "HealthPit-Adresse fehlt.": [.english: "HealthPit address is missing.", .french: "L’adresse HealthPit est manquante.", .spanish: "Falta la dirección de HealthPit.", .italian: "Manca l’indirizzo HealthPit.", .russian: "Не указан адрес HealthPit.", .chinese: "缺少 HealthPit 地址。", .japanese: "HealthPitのアドレスがありません。"],
+        "HealthPit-Adresse ist ungültig.": [.english: "The HealthPit address is invalid.", .french: "L’adresse HealthPit n’est pas valide.", .spanish: "La dirección de HealthPit no es válida.", .italian: "L’indirizzo HealthPit non è valido.", .russian: "Адрес HealthPit недействителен.", .chinese: "HealthPit 地址无效。", .japanese: "HealthPitのアドレスが無効です。"],
+        "HealthPit-Token fehlt.": [.english: "HealthPit token is missing.", .french: "Le jeton HealthPit est manquant.", .spanish: "Falta el token de HealthPit.", .italian: "Manca il token HealthPit.", .russian: "Не указан токен HealthPit.", .chinese: "缺少 HealthPit 令牌。", .japanese: "HealthPitトークンがありません。"],
+        "Offline · wird später synchronisiert": [.english: "Offline · syncs later", .french: "Hors ligne · synchronisation ultérieure", .spanish: "Sin conexión · se sincronizará después", .italian: "Offline · sincronizzazione successiva", .russian: "Офлайн · синхронизация позже", .chinese: "离线 · 稍后同步", .japanese: "オフライン・後で同期"],
+        "Pausieren": [.english: "Pause", .french: "Mettre en pause", .spanish: "Pausar", .italian: "Pausa", .russian: "Приостановить", .chinese: "暂停", .japanese: "一時停止"],
+        "Puls, aktive Kalorien und Trainingszeit werden mit Apple Health aufgezeichnet.": [.english: "Heart rate, active calories, and workout time are recorded with Apple Health.", .french: "La fréquence cardiaque, les calories actives et la durée sont enregistrées avec Apple Santé.", .spanish: "La frecuencia cardiaca, las calorías activas y el tiempo se registran con Apple Salud.", .italian: "Frequenza cardiaca, calorie attive e durata vengono registrate con Apple Salute.", .russian: "Пульс, активные калории и время тренировки записываются в Apple Health.", .chinese: "心率、活动能量和训练时间会记录到 Apple 健康。", .japanese: "心拍数、アクティブカロリー、時間をAppleヘルスケアに記録します。"],
+        "Satz anpassen": [.english: "Adjust set", .french: "Ajuster la série", .spanish: "Ajustar serie", .italian: "Modifica serie", .russian: "Настроить подход", .chinese: "调整组", .japanese: "セットを調整"],
+        "Steuerung": [.english: "Controls", .french: "Commandes", .spanish: "Controles", .italian: "Controlli", .russian: "Управление", .chinese: "控制", .japanese: "コントロール"],
+        "Training pausiert": [.english: "Workout paused", .french: "Entraînement en pause", .spanish: "Entrenamiento en pausa", .italian: "Allenamento in pausa", .russian: "Тренировка приостановлена", .chinese: "训练已暂停", .japanese: "ワークアウト一時停止中"],
+        "iPhone verbunden": [.english: "iPhone connected", .french: "iPhone connecté", .spanish: "iPhone conectado", .italian: "iPhone connesso", .russian: "iPhone подключён", .chinese: "iPhone 已连接", .japanese: "iPhone接続済み"],
+        "Übernehmen": [.english: "Apply", .french: "Appliquer", .spanish: "Aplicar", .italian: "Applica", .russian: "Применить", .chinese: "应用", .japanese: "適用"],
         "Anzeigen": [.english: "Show", .french: "Afficher", .spanish: "Mostrar", .italian: "Mostra", .russian: "Показать", .chinese: "显示", .japanese: "表示"],
         "Bestes Satzvolumen": [.english: "Best set volume", .french: "Meilleur volume de série", .spanish: "Mejor volumen de serie", .italian: "Miglior volume della serie", .russian: "Лучший объём подхода", .chinese: "最佳单组容量", .japanese: "最高セットボリューム"],
         "Die Anteile werden beim Speichern automatisch auf 100 % verteilt.": [.english: "When saved, the shares are automatically normalized to 100%.", .french: "Lors de l’enregistrement, les parts sont automatiquement réparties sur 100 %.", .spanish: "Al guardar, las proporciones se ajustan automáticamente al 100 %.", .italian: "Al salvataggio, le percentuali vengono distribuite automaticamente fino al 100%.", .russian: "При сохранении доли автоматически распределяются до 100 %.", .chinese: "保存时，各比例会自动调整为总计 100%。", .japanese: "保存時に割合の合計が自動的に100%になるよう調整されます。"],

@@ -384,13 +384,13 @@ enum WorkoutCSVCodec {
     }
 }
 
-/// Eine Zeile Statusanzeige. Der Text ist bereits uebersetzt; `isError` und
-/// `isIdle` ersetzen die frueheren Vergleiche auf deutsche Zeichenketten, die
-/// in jeder anderen Sprache ins Leere liefen.
+/// A single status row. The text is already translated; `isError` and `isIdle`
+/// replace the previous comparisons against German strings, which failed in
+/// every other language.
 struct StatusMessage: Equatable {
     var text: String
     var isError = false
-    /// Es ist noch nichts passiert — die Oberflaeche zeigt die Zeile dann nicht.
+    /// Nothing has happened yet, so the interface does not show the row.
     var isIdle = false
 
     static func info(_ text: String) -> StatusMessage {
@@ -439,6 +439,7 @@ final class WorkoutStore: ObservableObject {
         .idle(AppLanguage.current.ui("HealthPit nicht übertragen"))
 
     private var isSyncingRoutine = false
+    private var isBridgeFullSyncInFlight = false
     private var healthExportedSessionIDs: Set<UUID> = []
     private var healthExportSessionIDsInFlight: Set<UUID> = []
 
@@ -521,6 +522,10 @@ final class WorkoutStore: ObservableObject {
             saveHistory()
         }
         updateLiveActivity()
+        // A full, idempotent upload is also entity discovery: Home Assistant
+        // learns every sport and exercise dynamically from the payload. This
+        // must work for every user without a preconfigured entity list.
+        synchronizeBridgeEntitiesIfConnected()
     }
 
     func reloadPlanFromSharedStorage() {
@@ -739,11 +744,39 @@ final class WorkoutStore: ObservableObject {
     }
 
     func endWorkout() {
+        finishWorkout()
+    }
+
+    func endWorkoutFromWatch(
+        workoutID: UUID?,
+        durationSeconds: TimeInterval?,
+        activeCalories: Double?,
+        healthWorkoutSaved: Bool
+    ) {
+        finishWorkout(
+            workoutID: workoutID,
+            durationMinutes: durationSeconds.map { max(0, $0) / 60 },
+            activeCalories: activeCalories,
+            healthWorkoutSaved: healthWorkoutSaved
+        )
+    }
+
+    private func finishWorkout(
+        workoutID: UUID? = nil,
+        durationMinutes: Double? = nil,
+        activeCalories: Double? = nil,
+        healthWorkoutSaved: Bool = false
+    ) {
         let addedDuringWorkout = plan.exercises.filter { plan.workoutOnlyExerciseIDs.contains($0.id) }
         let setChangedDuringWorkout = plan.exercises.filter { exercise in
             exercise.sets.contains { plan.workoutOnlySetIDs.contains($0.id) }
         }
-        if let session = archiveWorkoutIfNeeded() {
+        if let session = archiveWorkoutIfNeeded(
+            sessionID: workoutID,
+            durationMinutes: durationMinutes,
+            activeCalories: activeCalories,
+            healthWorkoutSaved: healthWorkoutSaved
+        ) {
             latestCompletedSession = session
         }
         preparePlanForNextWorkout()
@@ -1112,6 +1145,16 @@ final class WorkoutStore: ObservableObject {
     }
 
     func uploadAllHistoricSessionsToBridge() {
+        syncAllHistoricSessionsToBridge()
+    }
+
+    func synchronizeBridgeEntitiesIfConnected() {
+        guard GymPitBridgeSyncService.shared.hasSession else { return }
+        syncAllHistoricSessionsToBridge()
+    }
+
+    private func syncAllHistoricSessionsToBridge() {
+        guard !isBridgeFullSyncInFlight else { return }
         let sessions = history
         guard !sessions.isEmpty else {
             bridgeSyncStatus = .info(AppLanguage.current.ui("Keine Trainings vorhanden"))
@@ -1121,10 +1164,12 @@ final class WorkoutStore: ObservableObject {
         bridgeSyncStatus = .info(
             AppLanguage.current.ui(format: "HealthPit überträgt Trainings (%d)...", sessions.count)
         )
+        isBridgeFullSyncInFlight = true
         Task {
             do {
                 let summary = try await GymPitBridgeSyncService.shared.uploadAndReconcile(sessions)
                 await MainActor.run {
+                    isBridgeFullSyncInFlight = false
                     if summary.uploaded == 0 {
                         bridgeSyncStatus = .info(AppLanguage.current.ui("HealthPit: keine neuen Trainings"))
                     } else {
@@ -1133,6 +1178,7 @@ final class WorkoutStore: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
+                    isBridgeFullSyncInFlight = false
                     bridgeSyncStatus = .error(
                         AppLanguage.current.ui(format: "HealthPit Fehler: %@", error.localizedDescription)
                     )
@@ -1657,10 +1703,15 @@ final class WorkoutStore: ObservableObject {
         }
     }
 
-    private func archiveWorkoutIfNeeded() -> WorkoutSession? {
+    private func archiveWorkoutIfNeeded(
+        sessionID requestedSessionID: UUID? = nil,
+        durationMinutes measuredDurationMinutes: Double? = nil,
+        activeCalories measuredActiveCalories: Double? = nil,
+        healthWorkoutSaved: Bool = false
+    ) -> WorkoutSession? {
         guard plan.archivedSessionID == nil else { return nil }
 
-        let sessionID = UUID()
+        let sessionID = requestedSessionID ?? UUID()
         let sessionExercises = plan.exercises.compactMap { exercise -> WorkoutSessionExercise? in
             let loggedSets = exercise.sets.filter(\.isLogged)
             guard !loggedSets.isEmpty else { return nil }
@@ -1688,21 +1739,36 @@ final class WorkoutStore: ObservableObject {
         guard !sessionExercises.isEmpty else { return nil }
 
         let estimatedDuration = plan.exercises.reduce(0.0) { $0 + $1.estimatedMinutes(using: plan.profile) }
-        let duration = plan.actualDurationMinutes > 0 ? plan.actualDurationMinutes : estimatedDuration
+        let duration = if let measuredDurationMinutes, measuredDurationMinutes > 0 {
+            measuredDurationMinutes
+        } else if plan.actualDurationMinutes > 0 {
+            plan.actualDurationMinutes
+        } else {
+            estimatedDuration
+        }
+        let calories = if let measuredActiveCalories, measuredActiveCalories > 0 {
+            Int(measuredActiveCalories.rounded())
+        } else {
+            estimatedCaloriesForLoggedExercises()
+        }
         let session = WorkoutSession(
             id: sessionID,
             planName: plan.name,
             date: Date(),
             notes: plan.workoutNotes,
             durationMinutes: duration,
-            calories: estimatedCaloriesForLoggedExercises(),
+            calories: calories,
             exercises: sessionExercises
         )
 
         history.insert(session, at: 0)
         sortHistoryByPerformedDate()
         plan.archivedSessionID = sessionID
-        if WorkoutHealthExporter.shared.isAuthorizedForAutomaticSave {
+        if healthWorkoutSaved {
+            healthExportedSessionIDs.insert(sessionID)
+            saveHealthExportedSessionIDs()
+            healthExportStatus = .info(AppLanguage.current.ui("Apple Health verbunden"))
+        } else if WorkoutHealthExporter.shared.isAuthorizedForAutomaticSave {
             exportSessionToHealth(session)
         } else {
             healthExportStatus = .info(AppLanguage.current.ui("Apple Health nicht verbunden"))

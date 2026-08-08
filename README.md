@@ -7,6 +7,11 @@ through StoreKit 2.
 Workout data stays on the device. Apple Health, file export, and the connection
 to Home Assistant are optional and only run once you set them up.
 
+The Apple Watch app can run a strength workout without an active iPhone
+connection. It shows the current exercise and set, controls rest timers,
+records heart rate, active calories, and duration through HealthKit, and syncs
+the finished session back to the iPhone history.
+
 ## Open the project
 
 Open `GymPit.xcodeproj` in Xcode and select the shared `GymPit` scheme.
@@ -18,6 +23,8 @@ Open `GymPit.xcodeproj` in Xcode and select the shared `GymPit` scheme.
 - `Docs/`: release instructions, App Store copy, and integration notes
 - `Scripts/`: helper scripts for generating exercise images
 - `Release/`: local build output, not part of this repository
+
+Release history is maintained in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Requirements
 
@@ -54,4 +61,4 @@ HTTPS.
 The Apple Watch does not connect on its own. It stays paired with the iPhone,
 and the iPhone does the sending.
 
-Release-related steps are documented in `Docs/Release.md`.
+Release-related steps are documented in [`Docs/Release.md`](Docs/Release.md).

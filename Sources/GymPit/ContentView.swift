@@ -7,8 +7,8 @@ import UniformTypeIdentifiers
 private enum AppLayout {
     static let cornerRadius: CGFloat = 8
     static let compactCornerRadius: CGFloat = cornerRadius
-    /// Apples Mindestgroesse fuer Tippziele. Die Satzfelder waren kleiner und
-    /// liessen sich mit dem Finger kaum treffen.
+    /// Apple's minimum target size. The set fields used to be smaller and were
+    /// difficult to hit with a finger.
     static let minimumTapTarget: CGFloat = 44
 }
 
@@ -407,11 +407,10 @@ private struct TrainingView: View {
                 }
                 .contentMargins(.top, 4, for: .scrollContent)
                 .listSectionSpacing(.compact)
-                // Die Tastatur schliesst ueber Scrollen statt ueber eine
-                // Tastatur-Toolbar: die legte ein bildschirmbreites, unsichtbares
-                // Band ueber die Liste und verschluckte dort jeden Tap, genau auf
-                // Hoehe der dritten Satzzeile. Und nicht ".interactively", sonst
-                // greift die Scrollgeste schon nach wenigen Punkt Fingerbewegung.
+                // Scrolling dismisses the keyboard. A keyboard toolbar created
+                // an invisible, full-width strip over the third set row that
+                // intercepted every tap. Avoid `.interactively` as well because
+                // its scroll gesture wins after only a few points of movement.
                 .scrollDismissesKeyboard(.immediately)
                 .background(currentDesign.pageBackground)
                 .safeAreaInset(edge: .top, spacing: 0) {
@@ -978,7 +977,7 @@ private struct SettingsView: View {
         refreshBridgeConnectionStatus()
     }
 
-    /// Das Token, das zum Verbinden gebraucht wird.
+    /// The token used to establish the connection.
     private var requiredBridgeToken: String { bridgeHomeAssistantToken }
 
     private func connectBridge() {
@@ -991,6 +990,7 @@ private struct SettingsView: View {
                     isConnectingBridge = false
                     isBridgeConnected = true
                     bridgeConnectionStatus = appLanguage.ui("HealthPit ist verbunden")
+                    store.synchronizeBridgeEntitiesIfConnected()
                 }
             } catch {
                 await MainActor.run {
@@ -1002,18 +1002,17 @@ private struct SettingsView: View {
         }
     }
 
-    /// Vom Anwender ausgeloest: der Token ist die Anmeldung, also muss er weg.
+    /// User initiated: the token is the credential, so remove it on disconnect.
     private func disconnectBridge() {
         GymPitBridgeSyncService.shared.disconnect()
         bridgeHomeAssistantToken = ""
         refreshBridgeConnectionStatus()
     }
 
-    /// Nur die Anzeige neu bewerten, wenn sich Adresse oder Token aendern.
+    /// Re-evaluate only the display state when the address or token changes.
     ///
-    /// Hier darf nicht getrennt werden: der Token *ist* die Anmeldung, und beim
-    /// Tippen kaeme jeder Tastendruck einem Loeschen des gerade eingegebenen
-    /// Tokens gleich.
+    /// Do not disconnect here: the token *is* the credential, and doing so while
+    /// typing would erase the token after every key press.
     private func resetBridgeConnection() {
         refreshBridgeConnectionStatus()
     }
@@ -1021,7 +1020,7 @@ private struct SettingsView: View {
     private func refreshBridgeConnectionStatus() {
         let service = GymPitBridgeSyncService.shared
         isBridgeConnected = service.hasSession
-        // Ein Long-Lived Token laeuft nicht ab, es gibt also keine Restlaufzeit.
+        // A long-lived token does not expire, so there is no remaining lifetime.
         if service.hasSession {
             bridgeConnectionStatus = appLanguage.ui("HealthPit ist verbunden")
         } else {
@@ -2134,8 +2133,8 @@ private struct ManualWorkoutEntryView: View {
                 .disabled(!canSave)
             }
         }
-        // Wie im Training: keine Tastatur-Toolbar ueber der Liste, sonst sind die
-        // Felder darunter nicht mehr antippbar.
+        // As in the active workout: do not place a keyboard toolbar over the
+        // list because it makes the fields below untappable.
         .scrollDismissesKeyboard(.immediately)
         .sheet(isPresented: $isAddingExercise) {
             NavigationStack {
@@ -2994,15 +2993,15 @@ private struct MuscleDistributionEditor: View {
 }
 
 private func formattedWeightInput(_ value: Double, unit: WeightUnit = .current) -> String {
-    // Keine erzwungenen zwei Nachkommastellen: "60" statt "60,00", damit der
-    // Wert in das schmale Satzfeld passt und nicht abgeschnitten wird.
+    // Do not force two decimal places: use "60" instead of "60.00" so the value
+    // fits in the narrow set field without clipping.
     unit.displayValue(fromKilograms: value).formatted(.number.precision(.fractionLength(0...2)))
 }
 
-/// Tippgeste fuer die Satzfelder. `onTapGesture` bricht ab, sobald der Finger
-/// ein paar Punkt wandert, und die Scrollgeste der Liste schluckt den Tap dann
-/// ganz. Diese Geste toleriert die uebliche Fingerbewegung und laesst echtes
-/// Scrollen (groessere Strecke) weiterhin durch.
+/// Tap gesture for set fields. `onTapGesture` cancels after a few points of
+/// finger movement, at which point the list's scroll gesture consumes the tap.
+/// This gesture tolerates normal movement while still allowing a longer drag to
+/// scroll the list.
 private func setFieldTapGesture(perform action: @escaping () -> Void) -> some Gesture {
     DragGesture(minimumDistance: 0)
         .onEnded { value in
@@ -3012,8 +3011,8 @@ private func setFieldTapGesture(perform action: @escaping () -> Void) -> some Ge
         }
 }
 
-/// Markiert den Inhalt des gerade fokussierten Feldes, damit die erste Ziffer
-/// den alten Wert ersetzt statt an ihn anzuhaengen.
+/// Selects the contents of the focused field so the first digit replaces the
+/// previous value instead of being appended to it.
 private func selectAllTextWhenFocused() {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
         UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
@@ -5175,7 +5174,7 @@ private struct FocusedSetInputField<FocusValue: Hashable>: View {
         .padding(.vertical, isCompact ? 4 : 7)
         .frame(minHeight: AppLayout.minimumTapTarget)
         .standardFieldFrame(cornerRadius: isCompact ? AppLayout.cornerRadius - 2 : AppLayout.cornerRadius)
-        // Das ganze Kaestchen ist Tippziel, nicht nur der schmale Textbereich.
+        // The entire field is the tap target, not only the narrow text area.
         .contentShape(Rectangle())
         .simultaneousGesture(setFieldTapGesture { focusedField = focusValue })
         .onChange(of: focusedField) { _, newValue in
@@ -5202,7 +5201,7 @@ private struct SetInputField: View {
             .padding(.vertical, isCompact ? 4 : 7)
             .frame(minHeight: AppLayout.minimumTapTarget)
             .standardFieldFrame(cornerRadius: isCompact ? AppLayout.cornerRadius - 2 : AppLayout.cornerRadius)
-            // Das ganze Kaestchen ist Tippziel, nicht nur der schmale Textbereich.
+            // The entire field is the tap target, not only the narrow text area.
             .contentShape(Rectangle())
             .simultaneousGesture(setFieldTapGesture { isFocused = true })
             .onChange(of: isFocused) { _, newValue in

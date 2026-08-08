@@ -1,8 +1,7 @@
 import Foundation
 
-/// Wohin GymPit sendet: direkt an Home Assistant, abgesichert ueber einen
-/// Long-Lived Access Token. Home Assistant erkennt am Token, welchem Benutzer
-/// die Trainings gehoeren.
+/// The destination GymPit sends to: Home Assistant directly, authenticated by a
+/// long-lived access token. Home Assistant derives the workout owner from it.
 enum HealthpitAPI {
     static let prefix = "api/healthpit/v1"
     static let defaultPort = "8123"
@@ -11,13 +10,13 @@ enum HealthpitAPI {
         "\(prefix)/\(path)"
     }
 
-    /// Authentifizierter Endpunkt zum Pruefen der Erreichbarkeit.
+    /// Authenticated endpoint used to verify reachability.
     static var probePath: String { path("status") }
 }
 
 enum GymPitBridgeSettings {
-    /// Long-Lived Access Token aus dem Home-Assistant-Profil. Er ist die
-    /// gesamte Anmeldung.
+    /// Long-lived access token from the Home Assistant profile. It is the
+    /// complete credential.
     static let homeAssistantTokenKey = "gymPitBridgeHomeAssistantToken"
     static let baseURLKey = "gymPitBridgeBaseURL"
     static let localConnectionEnabledKey = "gymPitBridgeLocalConnectionEnabled"
@@ -26,10 +25,10 @@ enum GymPitBridgeSettings {
     static let deviceIDKey = "gymPitBridgeDeviceID"
 }
 
-/// Was nach dem Verbinden feststeht. Home Assistant stellt keine Sitzung aus —
-/// der Long-Lived Token ist die Anmeldung und laeuft nicht ab. Festgehalten
-/// wird nur, zu welchem Home-Assistant-Benutzer der Token gehoert; an ihm
-/// haengen drueben die Entitaeten.
+/// State established after connecting. Home Assistant issues no session: the
+/// long-lived token is the credential and does not expire. Only the Home
+/// Assistant user belonging to the token is retained, because that user owns
+/// the entities on the receiving side.
 struct GymPitBridgeSession {
     let deviceName: String
     let username: String
@@ -274,7 +273,7 @@ private struct GymPitBridgeCredentials {
     let authToken: String
     let deviceID: String
 
-    /// Pfad inklusive des Präfixes der Integration.
+    /// Path including the integration prefix.
     func apiPath(_ path: String) -> String {
         HealthpitAPI.path(path)
     }
@@ -299,7 +298,7 @@ enum GymPitBridgeSyncError: LocalizedError {
         case .serverRejected(let code):
             return language.ui(format: "HealthPit hat die Übertragung abgelehnt (%d).", code)
         case .serverMessage(let message):
-            // Bereits uebersetzt, wo die Meldung entsteht.
+            // Already translated where the message is created.
             return message
         }
     }
@@ -330,8 +329,8 @@ final class GymPitBridgeSyncService {
         !Self.trimmedKeychainValue(for: GymPitBridgeSettings.homeAssistantTokenKey).isEmpty
     }
 
-    /// Verbindet mit Home Assistant. Der Long-Lived Token *ist* die Anmeldung;
-    /// geprueft wird er einmal gegen den Statusendpunkt der Integration.
+    /// Connects to Home Assistant. The long-lived token *is* the credential and
+    /// is verified once against the integration status endpoint.
     @discardableResult
     func connect() async throws -> GymPitBridgeSession {
         let token = Self.trimmedKeychainValue(for: GymPitBridgeSettings.homeAssistantTokenKey)
@@ -476,7 +475,7 @@ final class GymPitBridgeSyncService {
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(statusCode) else {
             if statusCode == 401 || statusCode == 403 {
-                // Der Token wurde in Home Assistant widerrufen oder ist falsch.
+                // The token was revoked in Home Assistant or is invalid.
                 throw GymPitBridgeSyncError.serverMessage(AppLanguage.current.ui(
                     "Home Assistant hat den Token abgelehnt. Bitte einen neuen Long-Lived Access Token eintragen."
                 ))
@@ -541,7 +540,7 @@ final class GymPitBridgeSyncService {
         }
 
         let baseURL = try await Self.configuredBaseURL(defaults: defaults)
-        // Kein Benutzername mehr: Home Assistant leitet ihn aus dem Token ab.
+        // No username is needed because Home Assistant derives it from the token.
         return GymPitBridgeCredentials(
             baseURL: baseURL,
             authToken: token,
@@ -617,8 +616,8 @@ final class GymPitBridgeSyncService {
 
         var request = URLRequest(url: endpoint)
         request.timeoutInterval = 1.2
-        // Der Statusendpunkt ist authentifiziert, ein Probelauf ohne Token
-        // waere also immer 401.
+        // The status endpoint is authenticated, so probing it without the token
+        // would always return 401.
         let token = trimmedKeychainValue(for: GymPitBridgeSettings.homeAssistantTokenKey)
         guard !token.isEmpty else { return false }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -630,8 +629,8 @@ final class GymPitBridgeSyncService {
                   let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 return false
             }
-            // Keine Rollenpruefung mehr: der Statusendpunkt der Integration
-            // meldet keine Master/Slave-Rolle, es gibt keine zweite Instanz.
+            // No role check is needed: the integration status endpoint has no
+            // primary/secondary role because there is no second instance.
             return object["status"] as? String == "ok"
         } catch {
             return false
@@ -653,7 +652,7 @@ final class GymPitBridgeSyncService {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
-        // Die Integration nennt den Grund "error", aeltere Gegenstellen "detail".
+        // The integration calls the reason "error"; older peers use "detail".
         let detail = (object["detail"] as? String) ?? (object["error"] as? String) ?? ""
         guard !detail.isEmpty else { return nil }
         return AppLanguage.current.ui(format: "HealthPit hat abgelehnt (%d): %@", statusCode, detail)

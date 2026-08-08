@@ -38,6 +38,8 @@
 		0A1B2C3D4E5F001001000305 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002A /* AppLanguage.swift */; };
 		0A1B2C3D4E5F001001000306 /* GymPitSharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F00100100002C /* GymPitSharedStorage.swift */; };
 		0A1B2C3D4E5F001001000307 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F0010010000F6 /* Assets.xcassets */; };
+		0A1B2C3D4E5F001001000308 /* WatchHealthWorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F0010010000F10 /* WatchHealthWorkoutManager.swift */; };
+		0A1B2C3D4E5F001001000309 /* GymPitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F0010010000F7 /* GymPitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0A1B2C3D4E5F001001000403 /* ExerciseDetailImages in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000402 /* ExerciseDetailImages */; };
 		0A1B2C3D4E5F001001000405 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */; };
 		0A1B2C3D4E5F001001000406 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */; };
@@ -52,6 +54,13 @@
 			remoteGlobalIDString = 0A1B2C3D4E5F0010010000C0;
 			remoteInfo = GymPitLiveActivity;
 		};
+		0A1B2C3D4E5F0010010000B2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0A1B2C3D4E5F001001000080 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0A1B2C3D4E5F0010010000FC;
+			remoteInfo = GymPitWatch;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -64,6 +73,17 @@
 				0A1B2C3D4E5F001001000206 /* GymPitLiveActivity.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A1B2C3D4E5F0010010000FB /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				0A1B2C3D4E5F001001000309 /* GymPitWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -100,6 +120,7 @@
 		0A1B2C3D4E5F0010010000F4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F5 /* GymPitWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GymPitWatch.entitlements; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		0A1B2C3D4E5F0010010000F10 /* WatchHealthWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHealthWorkoutManager.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F7 /* GymPitWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GymPitWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A1B2C3D4E5F001001000402 /* ExerciseDetailImages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ExerciseDetailImages; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -195,6 +216,7 @@
 				0A1B2C3D4E5F0010010000F1 /* GymPitWatchApp.swift */,
 				0A1B2C3D4E5F0010010000F2 /* WatchContentView.swift */,
 				0A1B2C3D4E5F0010010000F3 /* WatchWorkoutStore.swift */,
+				0A1B2C3D4E5F0010010000F10 /* WatchHealthWorkoutManager.swift */,
 				0A1B2C3D4E5F0010010000F4 /* Info.plist */,
 				0A1B2C3D4E5F0010010000F5 /* GymPitWatch.entitlements */,
 				0A1B2C3D4E5F0010010000F6 /* Assets.xcassets */,
@@ -213,11 +235,13 @@
 				0A1B2C3D4E5F001001000030 /* Frameworks */,
 				0A1B2C3D4E5F001001000070 /* Resources */,
 				0A1B2C3D4E5F0010010000A3 /* Embed Foundation Extensions */,
+				0A1B2C3D4E5F0010010000FB /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				0A1B2C3D4E5F0010010000B1 /* PBXTargetDependency */,
+				0A1B2C3D4E5F0010010000B3 /* PBXTargetDependency */,
 			);
 			name = GymPit;
 			packageProductDependencies = (
@@ -386,6 +410,7 @@
 				0A1B2C3D4E5F001001000304 /* Models.swift in Sources */,
 				0A1B2C3D4E5F001001000305 /* AppLanguage.swift in Sources */,
 				0A1B2C3D4E5F001001000306 /* GymPitSharedStorage.swift in Sources */,
+				0A1B2C3D4E5F001001000308 /* WatchHealthWorkoutManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,6 +421,11 @@
 			isa = PBXTargetDependency;
 			target = 0A1B2C3D4E5F0010010000C0 /* GymPitLiveActivity */;
 			targetProxy = 0A1B2C3D4E5F0010010000B0 /* PBXContainerItemProxy */;
+		};
+		0A1B2C3D4E5F0010010000B3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0A1B2C3D4E5F0010010000FC /* GymPitWatch */;
+			targetProxy = 0A1B2C3D4E5F0010010000B2 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -589,7 +619,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Sources/GymPitLiveActivity/GymPitLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/GymPitLiveActivity/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -598,7 +628,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 26.08;
 				PRODUCT_BUNDLE_IDENTIFIER = app.gympit.liveactivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -618,7 +648,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Sources/GymPitLiveActivity/GymPitLiveActivity.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/GymPitLiveActivity/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -627,7 +657,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 26.08;
 				PRODUCT_BUNDLE_IDENTIFIER = app.gympit.liveactivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -648,7 +678,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Sources/GymPitWatch/GymPitWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/GymPitWatch/Info.plist;
@@ -656,7 +686,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 26.08;
 				PRODUCT_BUNDLE_IDENTIFIER = app.gympit.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -675,7 +705,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Sources/GymPitWatch/GymPitWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/GymPitWatch/Info.plist;
@@ -683,7 +713,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 26.08;
 				PRODUCT_BUNDLE_IDENTIFIER = app.gympit.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
