@@ -9,5 +9,5 @@ Release/Export/
 Release/Current/AppStoreExport/
 Release/**/*.xcarchive/
 
-# Experimentierkopien gehoeren nicht ins Repo
+# Experimental copies do not belong in the repository.
 test/

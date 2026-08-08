@@ -59,7 +59,12 @@ final class PhoneWatchConnectivityController: NSObject {
         case "startWorkout":
             store?.startWorkout()
         case "endWorkout":
-            store?.endWorkout()
+            store?.endWorkoutFromWatch(
+                workoutID: uuid(from: message["workoutID"]),
+                durationSeconds: double(from: message["durationSeconds"]),
+                activeCalories: double(from: message["activeCalories"]),
+                healthWorkoutSaved: message["healthWorkoutSaved"] as? Bool ?? false
+            )
         case "completeNextSet":
             if let exerciseID = exerciseID(from: message) {
                 store?.completeNextSet(for: exerciseID)
@@ -72,6 +77,12 @@ final class PhoneWatchConnectivityController: NSObject {
             if let exerciseID = exerciseID(from: message) {
                 store?.selectExercise(id: exerciseID)
             }
+        case "addRestTime":
+            if let seconds = message["seconds"] as? Int {
+                store?.addRestTime(seconds)
+            }
+        case "updateSet":
+            updateSet(from: message)
         default:
             break
         }
@@ -82,6 +93,37 @@ final class PhoneWatchConnectivityController: NSObject {
     private func exerciseID(from message: [String: Any]) -> UUID? {
         guard let idString = message["exerciseID"] as? String else { return nil }
         return UUID(uuidString: idString)
+    }
+
+    private func updateSet(from message: [String: Any]) {
+        guard let store,
+              let exerciseID = exerciseID(from: message),
+              let setID = uuid(from: message["setID"]),
+              let exercise = store.plan.exercises.first(where: { $0.id == exerciseID }),
+              let set = exercise.sets.first(where: { $0.id == setID }),
+              let reps = message["reps"] as? Int,
+              let weight = double(from: message["weight"]) else { return }
+
+        store.updateSet(
+            set,
+            in: exercise,
+            type: set.type,
+            reps: reps,
+            weight: weight,
+            rpe: set.rpe,
+            isLogged: set.isLogged
+        )
+    }
+
+    private func uuid(from value: Any?) -> UUID? {
+        guard let value = value as? String else { return nil }
+        return UUID(uuidString: value)
+    }
+
+    private func double(from value: Any?) -> Double? {
+        if let value = value as? Double { return value }
+        if let value = value as? NSNumber { return value.doubleValue }
+        return nil
     }
 }
 
