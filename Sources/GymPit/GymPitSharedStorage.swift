@@ -12,9 +12,10 @@ enum WorkoutPersistenceKeys {
 enum GymPitSharedStorage {
     static let appGroupID = "group.app.gympit"
 
-    static var defaults: UserDefaults {
-        UserDefaults(suiteName: appGroupID) ?? .standard
-    }
+    /// Built once. This is read and written on every plan change, and creating
+    /// a suite instance per access showed up as avoidable work while logging
+    /// sets.
+    static let defaults: UserDefaults = UserDefaults(suiteName: appGroupID) ?? .standard
 
     static func data(forKey key: String) -> Data? {
         defaults.data(forKey: key) ?? UserDefaults.standard.data(forKey: key)

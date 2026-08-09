@@ -411,23 +411,30 @@ final class WorkoutStore: ObservableObject {
     @Published private(set) var plan: WorkoutPlan {
         didSet {
             syncActiveRoutineFromPlan()
-            save()
-            updateLiveActivity()
-            PhoneWatchConnectivityController.shared.publish(
-                plan: plan,
-                restEndDate: GymPitSharedStorage.date(forKey: WorkoutPersistenceKeys.restEndDate)
-            )
+            // A single tap can touch `plan` several times. Doing the encoding,
+            // the Live Activity refresh and the Watch hand-off inline meant all
+            // of that ran once per touch, on the main thread, before the UI got
+            // to redraw. It is now collected and done once, right after the
+            // current work finishes.
+            schedulePersist()
         }
     }
     @Published private(set) var routines: [WorkoutPlan] = [] {
-        didSet { saveRoutines() }
+        didSet { schedulePersist() }
     }
     @Published private(set) var defaultRoutineID: UUID? = nil {
         didSet { saveDefaultRoutineID() }
     }
     @Published private(set) var history: [WorkoutSession] = [] {
-        didSet { saveHistory() }
+        didSet {
+            saveHistory()
+            historicalExercisesCache.removeAll()
+        }
     }
+    /// `historicalExercises(for:)` sorts and scans the whole history. It is
+    /// called for every set row on every redraw, which made logging a set feel
+    /// sluggish once the history had grown. Cleared whenever `history` changes.
+    private var historicalExercisesCache: [String: [WorkoutSessionExercise]] = [:]
     @Published private(set) var latestCompletedSession: WorkoutSession?
     @Published private(set) var pendingRoutineExercises: [Exercise] = []
     @Published private(set) var pendingRoutineSetExercises: [Exercise] = []
@@ -439,6 +446,8 @@ final class WorkoutStore: ObservableObject {
         .idle(AppLanguage.current.ui("HealthPit nicht übertragen"))
 
     private var isSyncingRoutine = false
+    private var isPersistScheduled = false
+    private var hasPendingWrites = false
     private var isBridgeFullSyncInFlight = false
     private var healthExportedSessionIDs: Set<UUID> = []
     private var healthExportSessionIDsInFlight: Set<UUID> = []
@@ -1656,6 +1665,35 @@ final class WorkoutStore: ObservableObject {
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
     }
 
+    /// Marks the plan and routines as dirty. The actual work happens once, in
+    /// `flushPendingWrites()`, as soon as the current main-actor work is done.
+    private func schedulePersist() {
+        hasPendingWrites = true
+        guard !isPersistScheduled else { return }
+        isPersistScheduled = true
+
+        Task { @MainActor [weak self] in
+            self?.isPersistScheduled = false
+            self?.flushPendingWrites()
+        }
+    }
+
+    /// Writes everything that is still pending. Called automatically right
+    /// after a change, and from the app when it leaves the foreground so no
+    /// change can sit unwritten while the app is suspended.
+    func flushPendingWrites() {
+        guard hasPendingWrites else { return }
+        hasPendingWrites = false
+
+        save()
+        saveRoutines()
+        updateLiveActivity()
+        PhoneWatchConnectivityController.shared.publish(
+            plan: plan,
+            restEndDate: GymPitSharedStorage.date(forKey: WorkoutPersistenceKeys.restEndDate)
+        )
+    }
+
     private func save() {
         guard let data = try? JSONEncoder().encode(plan) else { return }
         GymPitSharedStorage.set(data, forKey: WorkoutPersistenceKeys.plan)
@@ -2093,7 +2131,13 @@ final class WorkoutStore: ObservableObject {
 
     private func historicalExercises(for exercise: Exercise) -> [WorkoutSessionExercise] {
         let exerciseName = normalizedExerciseName(exercise.name)
-        return history
+        let cacheKey = "\(exercise.catalogID)|\(exerciseName)"
+
+        if let cached = historicalExercisesCache[cacheKey] {
+            return cached
+        }
+
+        let result = history
             .sorted { $0.date < $1.date }
             .compactMap { session in
                 session.exercises.first {
@@ -2101,6 +2145,9 @@ final class WorkoutStore: ObservableObject {
                     (!exerciseName.isEmpty && normalizedExerciseName($0.name) == exerciseName)
                 }
             }
+
+        historicalExercisesCache[cacheKey] = result
+        return result
     }
 
     private func notificationExerciseID(from userInfo: [AnyHashable: Any]) -> UUID? {

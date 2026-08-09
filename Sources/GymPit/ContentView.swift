@@ -5,11 +5,79 @@ import UIKit
 import UniformTypeIdentifiers
 
 private enum AppLayout {
-    static let cornerRadius: CGFloat = 8
+    /// Corner radius for surfaces the app has to draw itself. It is only a
+    /// fallback: on iOS 26 `systemSurface` lets the system resolve the corners
+    /// concentrically with whatever container the view sits in, so these
+    /// surfaces match the list tiles next to them instead of guessing a number.
+    /// The value is the radius UIKit uses for grouped list sections.
+    static let cornerRadius: CGFloat = 10
     static let compactCornerRadius: CGFloat = cornerRadius
+    static let tightCornerRadius: CGFloat = cornerRadius
     /// Apple's minimum target size. The set fields used to be smaller and were
     /// difficult to hit with a finger.
     static let minimumTapTarget: CGFloat = 44
+    /// Vertical rhythm inside a card.
+    static let cardSpacing: CGFloat = 12
+    /// Padding inside a card.
+    static let cardPadding: CGFloat = 14
+}
+
+private enum AppMotion {
+    /// Short, crisp feedback for taps: check marks, chips, toggles.
+    static let tap = Animation.spring(response: 0.28, dampingFraction: 0.72)
+    /// Expanding and collapsing sections.
+    static let expand = Animation.spring(response: 0.34, dampingFraction: 0.86)
+    /// Progress bars, rings, and counters moving to a new value.
+    static let value = Animation.spring(response: 0.5, dampingFraction: 0.9)
+}
+
+/// Single place for haptics so the whole app uses the same vocabulary:
+/// light for navigating, medium for logging, success for finishing.
+private enum Haptics {
+    // Kept around and pre-armed. Building a generator at the moment of the tap
+    // has to spin up the Taptic engine first, which delays the feedback.
+    private static let light = UIImpactFeedbackGenerator(style: .light)
+    private static let medium = UIImpactFeedbackGenerator(style: .medium)
+    private static let notification = UINotificationFeedbackGenerator()
+
+    static func tap() {
+        light.impactOccurred()
+        light.prepare()
+    }
+
+    static func log() {
+        medium.impactOccurred()
+        medium.prepare()
+    }
+
+    static func success() {
+        notification.notificationOccurred(.success)
+        notification.prepare()
+    }
+
+    static func warning() {
+        notification.notificationOccurred(.warning)
+        notification.prepare()
+    }
+}
+
+/// Cards and rows that act as buttons shrink slightly while pressed. Without
+/// it a tap on a large card gives no feedback at all until the screen changes.
+private struct PressableStyle: ButtonStyle {
+    var scale: CGFloat = 0.98
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            // Short and linear on purpose. A spring here settles slowly and
+            // makes every tap feel like the app is thinking about it.
+            .animation(.easeOut(duration: 0.09), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == PressableStyle {
+    static var pressable: PressableStyle { PressableStyle() }
 }
 
 private enum AppearanceMode: String, CaseIterable, Identifiable {
@@ -121,7 +189,23 @@ private extension AppDesign {
     }
 
     var cardStroke: Color {
-        accentColor.opacity(0.18)
+        accentColor.opacity(0.14)
+    }
+
+    /// Used for the progress ring and prominent buttons. A flat accent colour
+    /// looks dull on large surfaces; the gradient gives the app some depth
+    /// without introducing a second hue.
+    var accentGradient: LinearGradient {
+        LinearGradient(
+            colors: [accentColor, accentColor.opacity(0.62)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    /// Very light accent wash for chips and highlighted rows.
+    var accentWash: Color {
+        accentColor.opacity(0.12)
     }
 
     private func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
@@ -154,10 +238,7 @@ private struct ThemedCardBackground: ViewModifier {
                 highlighted ? design.secondaryCardBackground : design.cardBackground,
                 in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(highlighted ? design.accentColor.opacity(0.32) : design.cardStroke, lineWidth: 1)
-            )
+            .systemSurfaceStroke(highlighted ? design.accentColor.opacity(0.32) : design.cardStroke, lineWidth: 1, minimum: cornerRadius)
     }
 }
 
@@ -170,26 +251,78 @@ private extension View {
         modifier(ThemedCardBackground(cornerRadius: cornerRadius, highlighted: highlighted))
     }
 
+    /// Fills the view with `style`, rounded the way the platform rounds things
+    /// here. On iOS 26 the corners are resolved concentrically against the
+    /// surrounding container, so a surface inside a list tile picks up that
+    /// tile's rounding instead of a number chosen by hand. Older systems fall
+    /// back to the grouped-list radius.
+    @ViewBuilder
+    func systemSurface<S: ShapeStyle>(_ style: S, minimum: CGFloat = AppLayout.cornerRadius) -> some View {
+        if #available(iOS 26.0, *) {
+            background(style, in: .rect(corners: .concentric(minimum: .fixed(minimum))))
+        } else {
+            background(style, in: .rect(cornerRadius: minimum, style: .continuous))
+        }
+    }
+
+    /// Outline counterpart to `systemSurface`.
+    @ViewBuilder
+    func systemSurfaceStroke<S: ShapeStyle>(_ style: S, lineWidth: CGFloat = 1, minimum: CGFloat = AppLayout.cornerRadius) -> some View {
+        if #available(iOS 26.0, *) {
+            overlay(ConcentricRectangle(corners: .concentric(minimum: .fixed(minimum))).stroke(style, lineWidth: lineWidth))
+        } else {
+            overlay(RoundedRectangle(cornerRadius: minimum, style: .continuous).stroke(style, lineWidth: lineWidth))
+        }
+    }
+
+    @ViewBuilder
+    func systemSurfaceClip(minimum: CGFloat = AppLayout.cornerRadius) -> some View {
+        if #available(iOS 26.0, *) {
+            clipShape(.rect(corners: .concentric(minimum: .fixed(minimum))))
+        } else {
+            clipShape(RoundedRectangle(cornerRadius: minimum, style: .continuous))
+        }
+    }
+
+    // No drop shadow. A shadow on every card forces the whole scroll view
+    // through offscreen rendering, and the training screen has a lot of them.
     func neutralCard(cornerRadius: CGFloat = AppLayout.cornerRadius) -> some View {
-        background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color(.separator).opacity(0.22), lineWidth: 0.75)
-            )
+        systemSurface(Color(.secondarySystemGroupedBackground), minimum: cornerRadius)
+            .systemSurfaceStroke(Color(.separator).opacity(0.18), lineWidth: 0.75, minimum: cornerRadius)
     }
 
-    func standardFieldFrame(cornerRadius: CGFloat = AppLayout.cornerRadius) -> some View {
-        background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color(.separator).opacity(0.22), lineWidth: 0.5)
-            )
+    func standardFieldFrame(cornerRadius: CGFloat = AppLayout.compactCornerRadius) -> some View {
+        systemSurface(Color(.tertiarySystemGroupedBackground), minimum: cornerRadius)
+            .systemSurfaceClip(minimum: cornerRadius)
+            .systemSurfaceStroke(Color(.separator).opacity(0.20), lineWidth: 0.5, minimum: cornerRadius)
     }
 
-    func fullWidthStandardFieldFrame(cornerRadius: CGFloat = AppLayout.cornerRadius, alignment: Alignment = .leading) -> some View {
+    func fullWidthStandardFieldFrame(cornerRadius: CGFloat = AppLayout.compactCornerRadius, alignment: Alignment = .leading) -> some View {
         frame(maxWidth: .infinity, alignment: alignment)
             .standardFieldFrame(cornerRadius: cornerRadius)
+    }
+
+    /// Small pill used for status words like "Aktiv", "Erfasst", "PR".
+    func statusPill(_ color: Color, filled: Bool = false) -> some View {
+        font(.caption2.weight(.bold))
+            .foregroundStyle(filled ? Color.white : color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(filled ? AnyShapeStyle(color) : AnyShapeStyle(color.opacity(0.15)), in: Capsule())
+    }
+}
+
+/// Uppercase section label with tracking. The default `Section` header inside a
+/// `Form` is easy to overlook; this makes the page structure readable at a
+/// glance without adding another font size.
+private struct GroupLabel: View {
+    let title: String
+
+    var body: some View {
+        Text(title.uppercased())
+            .font(.caption2.weight(.semibold))
+            .tracking(0.8)
+            .foregroundStyle(.secondary)
     }
 }
 
@@ -360,6 +493,9 @@ private struct TrainingView: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 Form {
+                    // Every row here is a plain Form row, so the section tile
+                    // the system draws is the only box on screen — the same
+                    // one the "Offen" list further down sits in.
                     Section {
                         WorkoutOverviewCard()
                             .id("trainingTop")
@@ -373,6 +509,7 @@ private struct TrainingView: View {
                         if let session = store.latestCompletedSession {
                             Section {
                                 TrainingSummaryCard(session: session)
+                                    .listRowBackground(Color.green.opacity(0.12))
                             }
                             if store.hasPendingRoutineChanges {
                                 Section {
@@ -412,7 +549,11 @@ private struct TrainingView: View {
                 // intercepted every tap. Avoid `.interactively` as well because
                 // its scroll gesture wins after only a few points of movement.
                 .scrollDismissesKeyboard(.immediately)
-                .background(currentDesign.pageBackground)
+                // Every other screen uses this. Training only set the tinted
+                // colour behind the Form without hiding the Form's own
+                // background, so the system's near-black covered the tint and
+                // this one page looked darker than the rest of the app.
+                .themedPageBackground()
                 .safeAreaInset(edge: .top, spacing: 0) {
                     StickyRestTimerInset(timerState: store.restTimerState)
                 }
@@ -508,14 +649,18 @@ private struct TrainingView: View {
             }
 
             Button {
+                Haptics.tap()
                 isAddingExerciseDuringWorkout = true
             } label: {
-                Label(appLanguage.ui("Übung hinzufügen"), systemImage: "plus.circle.fill")
+                Label(appLanguage.ui("Übung hinzufügen"), systemImage: "plus")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
                     .frame(maxWidth: .infinity)
+                    .frame(height: 40)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.pressable)
         } header: {
-            Text("\(appLanguage.ui("Offen")) (\(store.plan.openExercises.count)/\(store.plan.exercises.count))")
+            GroupLabel(title: "\(appLanguage.ui("Offen")) (\(store.plan.openExercises.count)/\(store.plan.exercises.count))")
         }
     }
 
@@ -527,19 +672,27 @@ private struct TrainingView: View {
     private var completedExercises: some View {
         Section {
             Button {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                Haptics.tap()
+                withAnimation(AppMotion.expand) {
                     store.toggleCompletedSection()
                 }
             } label: {
-                HStack {
-                    Label(appLanguage.ui("Erledigt"), systemImage: "checkmark.circle.fill")
-                    Text("(\(store.plan.completedExercises.count)/\(store.plan.exercises.count))")
-                        .font(.subheadline.weight(.semibold))
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(appLanguage.ui("Erledigt"))
+                        .font(.callout.weight(.semibold))
+                    Text("\(store.plan.completedExercises.count)/\(store.plan.exercises.count)")
+                        .font(.caption.weight(.bold))
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Image(systemName: store.plan.isCompletedSectionExpanded ? "chevron.up" : "chevron.down")
-                        .font(.footnote.weight(.semibold))
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(store.plan.isCompletedSectionExpanded ? 180 : 0))
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.vertical, 8)
@@ -594,46 +747,72 @@ private struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(appLanguage.ui("Training und Geräte")) {
+                Section {
                     NavigationLink {
                         DeviceManagementView()
                     } label: {
-                        Label(appLanguage.ui("Geräte und Übungen"), systemImage: "slider.horizontal.3")
+                        SettingsNavRow(
+                            icon: "slider.horizontal.3",
+                            tint: .blue,
+                            title: appLanguage.ui("Geräte und Übungen"),
+                            subtitle: "\(store.plan.exercises.count) \(appLanguage.ui("Übungen"))"
+                        )
                     }
 
                     NavigationLink {
                         trainingSettingsForm
                     } label: {
-                        Label(appLanguage.ui("Training"), systemImage: "figure.strengthtraining.traditional")
+                        SettingsNavRow(
+                            icon: "figure.strengthtraining.traditional",
+                            tint: .orange,
+                            title: appLanguage.ui("Training"),
+                            subtitle: appLanguage.ui("Pause, Kalorien, Körpergewicht")
+                        )
                     }
+                } header: {
+                    GroupLabel(title: appLanguage.ui("Training und Geräte"))
                 }
 
-                Section(appLanguage.ui("App und Daten")) {
+                Section {
                     NavigationLink {
                         appSettingsForm
                     } label: {
-                        Label(appLanguage.ui("App"), systemImage: "paintpalette")
+                        SettingsNavRow(
+                            icon: "paintpalette",
+                            tint: .purple,
+                            title: appLanguage.ui("App"),
+                            subtitle: appLanguage.ui("Design, Sprache, Einheit")
+                        )
                     }
 
                     NavigationLink {
                         dataAndInterfacesSettingsForm
                     } label: {
-                        Label(appLanguage.ui("Daten / Schnittstellen"), systemImage: "externaldrive.connected.to.line.below")
+                        SettingsNavRow(
+                            icon: "externaldrive.connected.to.line.below",
+                            tint: .teal,
+                            title: appLanguage.ui("Daten / Schnittstellen"),
+                            subtitle: appLanguage.ui("Health, Home Assistant, CSV")
+                        )
                     }
+                } header: {
+                    GroupLabel(title: appLanguage.ui("App und Daten"))
                 }
 
-                Section(appLanguage.ui("Infos")) {
+                Section {
                     NavigationLink {
                         supportSettingsForm
                     } label: {
-                        Label(appLanguage.ui("Unterstützen"), systemImage: "heart")
+                        SettingsNavRow(icon: "heart.fill", tint: .pink, title: appLanguage.ui("Unterstützen"), subtitle: nil)
                     }
 
                     NavigationLink {
                         aboutSettingsForm
                     } label: {
-                        Label(appLanguage.ui("Über"), systemImage: "info.circle")
+                        SettingsNavRow(icon: "info.circle", tint: .gray, title: appLanguage.ui("Über"), subtitle: nil)
                     }
+                } header: {
+                    GroupLabel(title: appLanguage.ui("Infos"))
                 }
 
             }
@@ -1187,10 +1366,7 @@ private struct DesignPreviewRow: View {
                     .frame(width: 20, height: 20)
                 RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
                     .fill(design.pageBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                            .stroke(design.cardStroke, lineWidth: 1)
-                    )
+                    .systemSurfaceStroke(design.cardStroke, lineWidth: 1, minimum: AppLayout.cornerRadius)
                     .frame(width: 20, height: 20)
                 RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
                     .fill(design.cardBackground)
@@ -1226,57 +1402,67 @@ private struct RoutinesView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section(appLanguage.ui("Routinen")) {
+                Section {
                     ForEach(store.routines) { routine in
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Button {
-                                store.selectRoutine(routine)
+                                Haptics.tap()
+                                withAnimation(AppMotion.tap) { store.selectRoutine(routine) }
                             } label: {
                                 RoutineListRow(routine: routine)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
 
-                            Button {
+                            // Both actions used to be identically sized filled
+                            // circles, so it was guesswork which one edits.
+                            RoutineIconButton(icon: "list.bullet", isProminent: false) {
                                 route = .detail(routine.id)
-                            } label: {
-                                Image(systemName: "list.bullet.circle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 32, height: 32)
                             }
-                            .buttonStyle(.plain)
                             .accessibilityLabel("\(routine.name) \(appLanguage.ui("Anzeigen"))")
 
-                            Button {
+                            RoutineIconButton(icon: "pencil", isProminent: true) {
                                 route = .edit(routine.id)
-                            } label: {
-                                Image(systemName: "pencil.circle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(Color.accentColor)
-                                    .frame(width: 32, height: 32)
                             }
-                            .buttonStyle(.plain)
                             .accessibilityLabel("\(routine.name) \(appLanguage.ui("Bearbeiten"))")
                         }
+                        .padding(.vertical, 2)
                     }
                     .onDelete(perform: store.deleteRoutine)
+                } header: {
+                    GroupLabel(title: appLanguage.ui("Routinen"))
                 }
 
                 Section {
                     Button {
+                        Haptics.tap()
                         store.createEmptyRoutine()
                         route = .edit(store.plan.id)
                     } label: {
-                        Label(appLanguage.ui("Neue Routine erstellen"), systemImage: "plus.square")
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus")
+                                .font(.footnote.weight(.bold))
+                            Text(appLanguage.ui("Neue Routine erstellen"))
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(Color.accentColor)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.pressable)
                 }
 
-                Section(appLanguage.ui("Aktive Routine")) {
-                    StatTile(title: appLanguage.ui("Übungen"), value: "\(store.plan.exercises.count)", icon: "list.bullet")
-                    StatTile(title: appLanguage.ui("Volumen"), value: store.plan.totalVolume.formattedWeight(unit: weightUnit), icon: "scalemass")
-                    StatTile(title: appLanguage.ui("Kalorien"), value: "\(store.plan.estimatedCalories)", icon: "flame")
+                Section {
+                    StatTileRow {
+                        MiniStatTile(title: appLanguage.ui("Übungen"), value: "\(store.plan.exercises.count)", icon: "list.bullet")
+                        MiniStatTile(title: appLanguage.ui("Volumen"), value: store.plan.totalVolume.formattedWeight(unit: weightUnit), icon: "scalemass")
+                        MiniStatTile(title: appLanguage.ui("Kalorien"), value: "\(store.plan.estimatedCalories)", icon: "flame")
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    GroupLabel(title: "\(appLanguage.ui("Aktive Routine")) · \(store.plan.name)")
                 }
             }
             .navigationTitle(appLanguage.ui("Routinen"))
@@ -1306,6 +1492,29 @@ private struct RoutinesView: View {
 
     private var weightUnit: WeightUnit {
         WeightUnit.value(for: weightUnitRawValue)
+    }
+}
+
+private struct RoutineIconButton: View {
+    let icon: String
+    let isProminent: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            Image(systemName: icon)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(isProminent ? Color.white : Color.secondary)
+                .frame(width: 36, height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: AppLayout.tightCornerRadius, style: .continuous)
+                        .fill(isProminent ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.07)))
+                )
+        }
+        .buttonStyle(.pressable)
     }
 }
 
@@ -1373,19 +1582,24 @@ private struct RoutineListRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: isDefault ? "star.fill" : "list.bullet.rectangle")
-                .foregroundStyle(isDefault ? .yellow : (isActive ? Color.accentColor : .secondary))
-                .frame(width: 24)
+            ZStack {
+                RoundedRectangle(cornerRadius: AppLayout.tightCornerRadius, style: .continuous)
+                    .fill(isActive ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.06))
+                Image(systemName: isDefault ? "star.fill" : "list.bullet.rectangle")
+                    .font(.footnote)
+                    .foregroundStyle(isDefault ? .yellow : (isActive ? Color.accentColor : .secondary))
+            }
+            .frame(width: 36, height: 36)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(routine.name)
-                        .font(.headline)
+                        .font(.callout.weight(.semibold))
                         .foregroundStyle(.primary)
+                        .lineLimit(1)
                     if isActive {
                         Text(appLanguage.ui("Aktiv"))
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.accentColor)
+                            .statusPill(Color.accentColor)
                     }
                 }
                 Text("\(routine.exercises.count) \(appLanguage.ui("Übungen"))")
@@ -1393,12 +1607,7 @@ private struct RoutineListRow: View {
                     .foregroundStyle(.secondary)
             }
 
-            Spacer()
-
-            if isActive {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            }
+            Spacer(minLength: 4)
         }
     }
 
@@ -1659,7 +1868,7 @@ private struct HistoryView: View {
                             .padding(.vertical, 8)
                         }
                     } else {
-                        Section(appLanguage.ui("Trainings")) {
+                        Section {
                             ForEach(store.history) { session in
                                 NavigationLink {
                                     SessionDetailView(session: session)
@@ -1668,6 +1877,8 @@ private struct HistoryView: View {
                                 }
                             }
                             .onDelete(perform: store.deleteHistory)
+                        } header: {
+                            GroupLabel(title: appLanguage.ui("Trainings"))
                         }
                     }
                 }
@@ -1742,7 +1953,9 @@ private struct HistoryGraphsSection: View {
                 }
             }
 
-            Section(appLanguage.ui("Graphs")) {
+            // The segmented control above already says "Graphs"; a section
+            // header repeating it only cost vertical space.
+            Section {
                 if currentRoutine.exercises.isEmpty {
                     Text(appLanguage.ui("Keine Übungen in dieser Routine."))
                         .foregroundStyle(.secondary)
@@ -1759,6 +1972,8 @@ private struct HistoryGraphsSection: View {
                         }
                     }
                     .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
         }
@@ -1815,15 +2030,39 @@ private struct HistoryExerciseGraphTile: View {
             }
 
             if trendPoints.isEmpty {
-                Color.clear
+                // The tile used to reserve the chart area and leave it blank,
+                // which read as a rendering bug rather than "no data yet".
+                VStack(spacing: 4) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.title3)
+                        .foregroundStyle(.tertiary)
+                    Text(appLanguage.ui("Noch keine Daten"))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Chart(trendPoints) { point in
-                    AreaMark(
-                        x: .value("Datum", point.date),
-                        y: .value(appLanguage.ui("Gewicht"), point.maxWeight)
-                    )
-                    .foregroundStyle(Color.accentColor.opacity(0.14))
+                    // Only once there is a shape worth filling. With two nearly
+                    // equal values the area is just a solid block across the
+                    // whole tile and says nothing.
+                    if trendPoints.count > 3 {
+                        AreaMark(
+                            x: .value("Datum", point.date),
+                            y: .value(appLanguage.ui("Gewicht"), point.maxWeight)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.accentColor.opacity(0.28), Color.accentColor.opacity(0.02)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        // `.monotone` instead of `.catmullRom`: Catmull-Rom
+                        // overshoots between close values, and the filled area
+                        // then spilled out of the tile over its neighbours.
+                        .interpolationMethod(.monotone)
+                    }
 
                     LineMark(
                         x: .value("Datum", point.date),
@@ -1831,10 +2070,30 @@ private struct HistoryExerciseGraphTile: View {
                     )
                     .foregroundStyle(Color.accentColor)
                     .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .interpolationMethod(.monotone)
+
+                    // A single session draws no line at all, so mark the points.
+                    // From a few sessions on the line carries the trend and the
+                    // dots only clutter the small tile.
+                    if trendPoints.count <= 3 {
+                        PointMark(
+                            x: .value("Datum", point.date),
+                            y: .value(appLanguage.ui("Gewicht"), point.maxWeight)
+                        )
+                        .foregroundStyle(Color.accentColor)
+                        .symbolSize(28)
+                    }
                 }
                 .chartXAxis(.hidden)
                 .chartYAxis(.hidden)
+                .chartYScale(domain: chartDomain)
+                .chartPlotStyle { plot in
+                    // Keeps the drawing inside the tile no matter what the
+                    // interpolation does at the edges.
+                    plot.clipped()
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
             }
 
             HStack(spacing: 6) {
@@ -1843,18 +2102,25 @@ private struct HistoryExerciseGraphTile: View {
                 GraphTileValue(title: appLanguage.ui("Letzter"), value: latestValueText, alignment: .trailing, titleColor: latestValueColor, valueColor: latestValueColor)
             }
         }
-        .padding(10)
+        .padding(12)
         .aspectRatio(1, contentMode: .fit)
         .frame(maxWidth: .infinity)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                .stroke(Color.accentColor.opacity(0.12), lineWidth: 1)
-        )
+        .systemSurface(Color(.secondarySystemGroupedBackground), minimum: AppLayout.cornerRadius)
+        .systemSurfaceStroke(Color(.separator).opacity(0.18), lineWidth: 0.75, minimum: AppLayout.cornerRadius)
     }
 
     private var trendPoints: [ExerciseTrendPoint] {
         store.trendPoints(for: exercise, scale: .all)
+    }
+
+    /// A flat series would otherwise be drawn on the very bottom edge of the
+    /// tile. Padding the domain keeps the line inside the visible area.
+    private var chartDomain: ClosedRange<Double> {
+        let values = trendPoints.map(\.maxWeight)
+        let lowest = values.min() ?? 0
+        let highest = values.max() ?? 1
+        let padding = max(1, (highest - lowest) * 0.35)
+        return (lowest - padding)...(highest + padding)
     }
 
     private var measuredTrendPoints: [ExerciseTrendPoint] {
@@ -2437,11 +2703,8 @@ private struct ManualWorkoutSetEditor: View {
             }
             .padding(.horizontal, 5)
             .frame(height: AppLayout.minimumTapTarget + 8)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                    .stroke(Color(.separator).opacity(0.26), lineWidth: 0.75)
-            )
+            .systemSurface(Color(.secondarySystemGroupedBackground), minimum: AppLayout.cornerRadius)
+            .systemSurfaceStroke(Color(.separator).opacity(0.26), lineWidth: 0.75, minimum: AppLayout.cornerRadius)
             .opacity(set.isLogged ? 1 : 0.55)
         }
         .padding(.vertical, 2)
@@ -2463,7 +2726,7 @@ private struct ManualWorkoutSetEditor: View {
                     .foregroundStyle(.secondary)
             }
             .frame(width: 38, height: AppLayout.minimumTapTarget)
-            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
+            .systemSurface(Color(.tertiarySystemGroupedBackground), minimum: AppLayout.compactCornerRadius)
         }
         .buttonStyle(.plain)
     }
@@ -2504,7 +2767,7 @@ private struct ManualWorkoutSetEditor: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.primary)
                 .frame(minWidth: 46, minHeight: AppLayout.minimumTapTarget)
-                .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
+                .systemSurface(Color(.tertiarySystemGroupedBackground), minimum: AppLayout.compactCornerRadius)
         }
         .buttonStyle(.plain)
     }
@@ -2710,28 +2973,51 @@ private struct SessionDetailView: View {
 }
 
 private struct SessionRow: View {
+    @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.system.rawValue
+    @AppStorage(WeightUnit.storageKey) private var weightUnitRawValue = WeightUnit.kilograms.rawValue
     let session: WorkoutSession
 
     var body: some View {
         let category = HistoryMuscleSummary.dominantCategory(for: session)
 
-        HStack(spacing: 10) {
-            Image(systemName: category.iconName)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(category.historyColor)
-                .frame(width: 24)
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: AppLayout.tightCornerRadius, style: .continuous)
+                    .fill(category.historyColor.opacity(0.16))
+                Image(systemName: category.iconName)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(category.historyColor)
+            }
+            .frame(width: 34, height: 34)
 
-            Text(session.planName)
-                .font(.body)
-                .lineLimit(1)
-
-            Spacer(minLength: 8)
-
-            Text(session.date.formatted(date: .abbreviated, time: .shortened))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(session.planName)
+                        .font(.callout.weight(.semibold))
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(session.date.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+                // The row used to show only a name and a date. The three
+                // numbers you actually compare sessions by were one tap away.
+                Text(summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
         }
+        .padding(.vertical, 2)
+    }
+
+    private var summary: String {
+        let language = AppLanguage.value(for: appLanguageRawValue)
+        let unit = WeightUnit.value(for: weightUnitRawValue)
+        let sets = session.exercises.reduce(0) { $0 + $1.sets.count }
+        return "\(session.exercises.count) \(language.ui("Übungen")) · \(sets) \(language.ui("Sätze")) · \(session.totalVolume.formattedWeight(unit: unit))"
     }
 }
 
@@ -3260,21 +3546,55 @@ private struct ExercisePlanEditor: View {
     }
 }
 
+/// Circular progress with the percentage in the middle. Replaces the 3pt bar
+/// that was almost invisible and the separate percentage label next to it.
+private struct ProgressRing: View {
+    let progress: Double
+    var size: CGFloat = 62
+    var lineWidth: CGFloat = 6
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.accentColor.opacity(0.16), lineWidth: lineWidth)
+
+            Circle()
+                .trim(from: 0, to: min(1, max(0, progress)))
+                .stroke(
+                    AngularGradient(
+                        colors: [Color.accentColor.opacity(0.55), Color.accentColor],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+
+            Text("\(Int((progress * 100).rounded()))%")
+                .font(.system(size: size * 0.26, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+        }
+        .frame(width: size, height: size)
+        .animation(AppMotion.value, value: progress)
+        .accessibilityElement()
+        .accessibilityLabel("\(Int((progress * 100).rounded())) %")
+    }
+}
+
 private struct WorkoutOverviewCard: View {
     @EnvironmentObject private var store: WorkoutStore
     @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.system.rawValue
     @AppStorage("gympit_trainer_enabled") private var isTrainerEnabled = false
+    @State private var isDistributionExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: store.plan.isWorkoutStarted ? 5 : 7) {
+        VStack(alignment: .leading, spacing: AppLayout.cardSpacing) {
             header
 
-            ProgressView(value: progress)
-                .tint(Color.accentColor)
-                .frame(height: 3)
-
             if !store.plan.isWorkoutStarted {
-                HStack(spacing: 6) {
+                // A plain HStack sizes each tile by its own text, so "Calories"
+                // came out wider than "Sets". A grid splits the row evenly.
+                StatTileRow {
                     MiniStatTile(title: appLanguage.ui("Übungen"), value: "\(store.plan.exercises.count)", icon: "list.bullet")
                     MiniStatTile(title: appLanguage.ui("Sätze"), value: "\(store.plan.totalCompletedSets)", icon: "checklist")
                     MiniStatTile(title: appLanguage.ui("Kalorien"), value: "\(store.plan.estimatedCalories)", icon: "flame")
@@ -3282,61 +3602,89 @@ private struct WorkoutOverviewCard: View {
             }
 
             if !store.plan.exercises.isEmpty {
-                DisclosureGroup {
+                Divider().opacity(0.5)
+
+                Button {
+                    Haptics.tap()
+                    withAnimation(AppMotion.expand) { isDistributionExpanded.toggle() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "chart.bar.fill")
+                            .font(.footnote)
+                            .foregroundStyle(Color.accentColor)
+                        Text(appLanguage.ui("Muskelverteilung"))
+                            .font(.subheadline.weight(.semibold))
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.down")
+                            .font(.caption2.weight(.bold))
+                            .rotationEffect(.degrees(isDistributionExpanded ? 180 : 0))
+                            .foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if isDistributionExpanded {
                     MuscleDistributionView(
                         distribution: store.plan.muscleProgressDistribution,
                         showsCompletedProgress: store.plan.isWorkoutStarted
                     )
-                        .padding(.top, 4)
-                } label: {
-                    Label(appLanguage.ui("Muskelverteilung"), systemImage: "chart.bar.fill")
-                        .font(.caption.weight(.semibold))
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
         }
-        .padding(store.plan.isWorkoutStarted ? 8 : 10)
+        // No own card background: the Form section already draws one.
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .neutralCard()
+        .animation(AppMotion.value, value: progress)
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .center, spacing: 14) {
+            ProgressRing(progress: progress)
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(store.plan.name)
-                    .font(store.plan.isWorkoutStarted ? .subheadline.weight(.semibold) : .headline.weight(.semibold))
+                    .font(.title3.weight(.bold))
                     .lineLimit(1)
-                Text("\(store.plan.openExercises.count) \(appLanguage.ui("offen")), \(store.plan.completedExercises.count) \(appLanguage.ui("erledigt")) · \(store.plan.progressSummary(language: appLanguage))")
-                    .font(.caption2)
+                    .minimumScaleFactor(0.8)
+
+                Text("\(store.plan.progressSummary(language: appLanguage)) · \(store.plan.totalCompletedSets) \(appLanguage.ui("Sätze"))")
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
                 if store.plan.isWorkoutStarted {
                     WorkoutElapsedText(startDate: store.plan.workoutStartedAt)
                 }
             }
-
-            Spacer()
-
-            Text("\((progress * 100).formatted(.number.precision(.fractionLength(1))))%")
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(Color.accentColor)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if store.plan.isWorkoutStarted {
                 Button {
-                    isTrainerEnabled.toggle()
+                    Haptics.tap()
+                    withAnimation(AppMotion.tap) { isTrainerEnabled.toggle() }
                 } label: {
-                    Image(systemName: isTrainerEnabled ? "figure.run.circle.fill" : "figure.run.circle")
-                        .font(.title3)
-                        .foregroundStyle(isTrainerEnabled ? Color.accentColor : .secondary)
-                        .frame(width: 32, height: 32)
+                    Image(systemName: "figure.run")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(isTrainerEnabled ? Color.white : Color.secondary)
+                        .frame(width: 38, height: 38)
+                        .background(
+                            Circle().fill(
+                                isTrainerEnabled
+                                    ? AnyShapeStyle(Color.accentColor)
+                                    : AnyShapeStyle(Color(.tertiarySystemGroupedBackground))
+                            )
+                        )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .accessibilityLabel(
                     isTrainerEnabled
                         ? appLanguage.ui("Trainer ausschalten")
                         : appLanguage.ui("Trainer einschalten")
                 )
             }
-
         }
     }
 
@@ -3355,17 +3703,35 @@ private struct WorkoutElapsedText: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
-            Text("\(appLanguage.ui("Gesamtzeit")) \(timeText(at: timeline.date))")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
+            HStack(spacing: 5) {
+                Image(systemName: "stopwatch")
+                    .font(.caption2)
+                Text(timeText(at: timeline.date))
+                    .font(.footnote.weight(.semibold).monospacedDigit())
+                    .contentTransition(.numericText())
+            }
+            .foregroundStyle(Color.accentColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Color.accentColor.opacity(0.12), in: Capsule())
+            .padding(.top, 2)
+            .accessibilityLabel("\(appLanguage.ui("Gesamtzeit")) \(timeText(at: timeline.date))")
         }
     }
 
+    /// Beyond an hour the old `minutes:seconds` output ran up to values like
+    /// `2938:43`, which nobody can read. Hours now get their own field.
     private func timeText(at date: Date) -> String {
         guard let startDate else { return "0:00" }
         let seconds = max(0, Int(date.timeIntervalSince(startDate)))
-        let minutes = seconds / 60
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
         let remainingSeconds = seconds % 60
+
+        if hours > 0 {
+            return "\(hours):\(String(format: "%02d", minutes)):\(String(format: "%02d", remainingSeconds))"
+        }
+
         return "\(minutes):\(String(format: "%02d", remainingSeconds))"
     }
 
@@ -3400,12 +3766,9 @@ private struct TrainingSummaryCard: View {
                 .foregroundStyle(.secondary)
 
         }
-        .padding(16)
-        .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.green.opacity(0.25), lineWidth: 1)
-        )
+        // The green tint is applied as the Form row's background, so the
+        // section tile itself is coloured instead of a box drawn inside it.
+        .padding(.vertical, 6)
     }
 
     private var summaryColumns: [GridItem] {
@@ -3486,7 +3849,7 @@ private struct TrainingSummaryMetric: View {
         }
         .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
         .padding(10)
-        .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .systemSurface(Color.primary.opacity(0.055), minimum: AppLayout.compactCornerRadius)
     }
 }
 
@@ -3597,11 +3960,8 @@ private struct RoutineUpdatePrompt: View {
             }
         }
         .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                .stroke(Color(.separator).opacity(0.22), lineWidth: 0.75)
-        )
+        .systemSurface(Color(.secondarySystemGroupedBackground), minimum: AppLayout.cornerRadius)
+        .systemSurfaceStroke(Color(.separator).opacity(0.22), lineWidth: 0.75, minimum: AppLayout.cornerRadius)
     }
 
     private var summaryText: String {
@@ -3871,6 +4231,7 @@ private struct CompletionAchievement: Identifiable {
 private struct StartTrainingPrompt: View {
     @EnvironmentObject private var store: WorkoutStore
     @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.system.rawValue
+    @AppStorage("gympit_app_design") private var appDesignRawValue = AppDesign.ocean.rawValue
     @AppStorage("gympit_trainer_enabled") private var isTrainerEnabled = false
 
     var body: some View {
@@ -3881,38 +4242,61 @@ private struct StartTrainingPrompt: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Toggle(isOn: $isTrainerEnabled) {
+            // The old label stacked an icon-and-title Label above a caption, so
+            // the text ended up cramped next to the switch and truncated.
+            HStack(alignment: .center, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: AppLayout.tightCornerRadius, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.15))
+                    Image(systemName: "figure.run")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .frame(width: 32, height: 32)
+
                 VStack(alignment: .leading, spacing: 2) {
-                    Label(appLanguage.ui("Trainer"), systemImage: "figure.run.circle.fill")
+                    Text(appLanguage.ui("Trainer"))
                         .font(.subheadline.weight(.semibold))
                     Text(appLanguage.ui("Analysiert RPE, Gewicht und Wiederholungen für den nächsten Satz."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Spacer(minLength: 8)
+
+                Toggle("", isOn: $isTrainerEnabled)
+                    .labelsHidden()
+                    .tint(Color.accentColor)
             }
-            .tint(Color.accentColor)
+            .padding(.vertical, 4)
 
             Button {
-                store.startWorkout()
+                Haptics.success()
+                withAnimation(AppMotion.expand) { store.startWorkout() }
             } label: {
-                ZStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "play.fill")
+                        .accessibilityHidden(true)
                     Text(appLanguage.ui("Training starten"))
-                        .font(.body.weight(.semibold))
+                        .font(.headline)
                         .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    HStack {
-                        Image(systemName: "play.fill")
-                            .accessibilityHidden(true)
-                        Spacer(minLength: 0)
-                    }
                 }
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .systemSurface(currentDesign.accentGradient, minimum: AppLayout.compactCornerRadius)
+                .shadow(color: Color.accentColor.opacity(0.35), radius: 10, y: 4)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.pressable)
         }
-        .padding(14)
+        // No own card background: the Form section already draws one.
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .neutralCard()
+    }
+
+    private var currentDesign: AppDesign {
+        AppDesign.value(for: appDesignRawValue)
     }
 
     private var appLanguage: AppLanguage {
@@ -3992,12 +4376,7 @@ private struct TrainerRecommendationCard: View {
                 .controlSize(.small)
             }
         }
-        .padding(10)
-        .background(Color.accentColor.opacity(0.09), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                .stroke(Color.accentColor.opacity(0.25), lineWidth: 1)
-        )
+        .padding(.vertical, 6)
         .onChange(of: recommendation) { oldValue, newValue in
             if oldValue != newValue {
                 appliedRecommendation = nil
@@ -4029,11 +4408,8 @@ private struct TrainerRecommendationCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(8)
-            .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous)
-                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-            )
+            .systemSurface(Color.orange.opacity(0.12), minimum: AppLayout.compactCornerRadius)
+            .systemSurfaceStroke(Color.orange.opacity(0.3), lineWidth: 1, minimum: AppLayout.compactCornerRadius)
             .accessibilityElement(children: .combine)
         }
     }
@@ -4052,7 +4428,7 @@ private struct TrainerRecommendationCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(7)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
+        .systemSurface(Color(.secondarySystemGroupedBackground), minimum: AppLayout.compactCornerRadius)
     }
 
     private func basisText(_ basis: TrainerRecommendation.Basis) -> String {
@@ -4079,17 +4455,37 @@ private struct TrainerRecommendationCard: View {
 private struct TrainingEndButton: View {
     @EnvironmentObject private var store: WorkoutStore
     @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.system.rawValue
+    @State private var isConfirming = false
 
     var body: some View {
         if store.plan.isWorkoutStarted && !store.plan.exercises.isEmpty {
             Button(role: .destructive) {
-                store.endWorkout()
+                Haptics.warning()
+                isConfirming = true
             } label: {
-                Label(appLanguage.ui("Training beenden"), systemImage: "stop.fill")
+                Label(appLanguage.ui("Training beenden"), systemImage: "flag.checkered")
+                    .font(.headline)
+                    .foregroundStyle(Color.red)
                     .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.borderedProminent)
-            .padding(.vertical, 4)
+            .buttonStyle(.pressable)
+            // Ending a workout cannot be undone and the button sits directly
+            // under the exercise list, so it now asks once.
+            .confirmationDialog(
+                appLanguage.ui("Training beenden"),
+                isPresented: $isConfirming,
+                titleVisibility: .visible
+            ) {
+                Button(appLanguage.ui("Jetzt beenden"), role: .destructive) {
+                    Haptics.success()
+                    store.endWorkout()
+                }
+                Button(appLanguage.ui("Abbrechen"), role: .cancel) {}
+            } message: {
+                Text(appLanguage.ui("Die Einheit wird gespeichert und der Plan wieder auf offen gesetzt."))
+            }
         }
     }
 
@@ -4133,11 +4529,8 @@ private struct RestTimerCard: View {
             .accessibilityLabel(appLanguage.ui("Timer stoppen"))
         }
         .padding(14)
-        .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.accentColor.opacity(0.25), lineWidth: 1)
-        )
+        .systemSurface(Color.accentColor.opacity(0.12), minimum: AppLayout.cornerRadius)
+        .systemSurfaceStroke(Color.accentColor.opacity(0.25), lineWidth: 1, minimum: AppLayout.cornerRadius)
     }
 
     private var timeText: String {
@@ -4175,41 +4568,70 @@ private struct StickyRestTimerBar: View {
     let remainingSeconds: Int
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "timer")
-                .foregroundStyle(.orange)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .stroke(Color.orange.opacity(0.22), lineWidth: 3)
+                Circle()
+                    .trim(from: 0, to: remainingFraction)
+                    .stroke(Color.orange, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Image(systemName: "pause.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.orange)
+            }
+            .frame(width: 30, height: 30)
+            .animation(.linear(duration: 0.9), value: remainingSeconds)
 
-            Text(appLanguage.ui("Pause"))
-                .font(.subheadline.weight(.semibold))
-
-            Text(timeText)
-                .font(.subheadline.monospacedDigit().weight(.bold))
-                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(appLanguage.ui("Pause"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(timeText)
+                    .font(.title3.monospacedDigit().weight(.bold))
+                    .foregroundStyle(.orange)
+                    .contentTransition(.numericText(countsDown: true))
+            }
 
             Spacer()
 
-            Button("+15") {
+            Button {
+                Haptics.tap()
                 store.addRestTime(15)
+            } label: {
+                Text("+15")
+                    .font(.footnote.weight(.bold))
+                    .frame(width: 48, height: 36)
+                    .systemSurface(Color.primary.opacity(0.07), minimum: AppLayout.compactCornerRadius)
             }
-            .font(.caption.weight(.semibold))
-            .buttonStyle(.bordered)
+            .buttonStyle(.pressable)
 
             Button {
+                Haptics.tap()
                 store.stopRestTimer()
             } label: {
                 Image(systemName: "forward.fill")
-                    .frame(width: 28, height: 28)
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 36)
+                    .systemSurface(Color.orange, minimum: AppLayout.compactCornerRadius)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.pressable)
             .accessibilityLabel(appLanguage.ui("Pause überspringen"))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.bar)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                .stroke(Color(.separator).opacity(0.22), lineWidth: 0.5)
-        )
+        .systemSurface(.regularMaterial, minimum: AppLayout.cornerRadius)
+        .systemSurfaceStroke(Color.orange.opacity(0.28), lineWidth: 1, minimum: AppLayout.cornerRadius)
+        .shadow(color: Color.black.opacity(0.12), radius: 8, y: 3)
+    }
+
+    /// The ring drains as the pause runs out. Without a reference length the
+    /// bar only ever showed a number; 90s is the app's default rest time.
+    private var remainingFraction: CGFloat {
+        let reference = max(remainingSeconds, store.plan.profile.defaultRestSeconds)
+        guard reference > 0 else { return 0 }
+        return CGFloat(remainingSeconds) / CGFloat(reference)
     }
 
     private var timeText: String {
@@ -4348,11 +4770,15 @@ private struct ExerciseRecordsView: View {
                         )
                         .foregroundStyle(Color.accentColor)
 
-                        PointMark(
-                            x: .value("Datum", point.date),
-                            y: .value(appLanguage.ui(chartMetric.rawValue), chartMetric.value(for: point))
-                        )
-                        .foregroundStyle(Color.accentColor)
+                        // Above a handful of sessions the dots merge into a
+                        // thick band; the line alone reads better then.
+                        if trendPoints.count <= 12 {
+                            PointMark(
+                                x: .value("Datum", point.date),
+                                y: .value(appLanguage.ui(chartMetric.rawValue), chartMetric.value(for: point))
+                            )
+                            .foregroundStyle(Color.accentColor)
+                        }
 
                         if point.id == selectedTrendPoint?.id {
                             RuleMark(x: .value("Auswahl", point.date))
@@ -4466,9 +4892,16 @@ private struct ChartSelectionLabel: View {
             .font(.caption2)
             .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        // A translucent material let the chart's line and gradient shine
+        // through, which made the selected value hard to read. Solid now.
+        .background(
+            RoundedRectangle(cornerRadius: AppLayout.tightCornerRadius, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+        .systemSurfaceStroke(Color(.separator).opacity(0.35), lineWidth: 0.75, minimum: AppLayout.tightCornerRadius)
+        .shadow(color: Color.black.opacity(0.18), radius: 5, y: 2)
     }
 }
 
@@ -4552,6 +4985,99 @@ private enum ExerciseImageLoader {
         image(named: name, subdirectory: "ExerciseDetailImages")
     }
 
+    /// Same image with its uniform borders cropped away. Result is cached
+    /// because the pixel scan runs on the main thread while a row is built.
+    static func trimmedDetailImage(named name: String) -> UIImage? {
+        if let cached = trimmedCache[name] {
+            return cached
+        }
+
+        guard let original = detailImage(named: name) else { return nil }
+        let trimmed = trimmingUniformBorder(of: original) ?? original
+        trimmedCache[name] = trimmed
+        return trimmed
+    }
+
+    private static var trimmedCache: [String: UIImage] = [:]
+
+    /// Crops away frame-like borders of a single flat colour. The assets nest
+    /// two of them (grey margin, then white card), so the scan repeats until
+    /// the picture stops shrinking.
+    private static func trimmingUniformBorder(of image: UIImage) -> UIImage? {
+        guard var cgImage = image.cgImage else { return nil }
+
+        for _ in 0..<4 {
+            guard let box = contentBounds(of: cgImage),
+                  box.width > 0, box.height > 0,
+                  box.width < cgImage.width || box.height < cgImage.height,
+                  let cropped = cgImage.cropping(to: CGRect(x: box.minX, y: box.minY, width: box.width, height: box.height))
+            else { break }
+
+            cgImage = cropped
+        }
+
+        guard cgImage !== image.cgImage else { return nil }
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    /// Bounding box of everything that differs from the top-left pixel, plus a
+    /// small margin so the drawing does not touch the edge.
+    private static func contentBounds(of cgImage: CGImage) -> (minX: Int, minY: Int, width: Int, height: Int)? {
+        let width = cgImage.width
+        let height = cgImage.height
+        guard width > 8, height > 8 else { return nil }
+
+        let bytesPerRow = width * 4
+        var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
+
+        guard let context = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        let backgroundRed = pixels[0]
+        let backgroundGreen = pixels[1]
+        let backgroundBlue = pixels[2]
+        let tolerance: Int = 12
+
+        var minX = width, minY = height, maxX = -1, maxY = -1
+
+        for y in 0..<height {
+            let rowStart = y * bytesPerRow
+            for x in 0..<width {
+                let offset = rowStart + x * 4
+                let differs =
+                    abs(Int(pixels[offset]) - Int(backgroundRed)) > tolerance ||
+                    abs(Int(pixels[offset + 1]) - Int(backgroundGreen)) > tolerance ||
+                    abs(Int(pixels[offset + 2]) - Int(backgroundBlue)) > tolerance
+
+                if differs {
+                    if x < minX { minX = x }
+                    if x > maxX { maxX = x }
+                    if y < minY { minY = y }
+                    if y > maxY { maxY = y }
+                }
+            }
+        }
+
+        guard maxX >= minX, maxY >= minY else { return nil }
+
+        let padding = max(2, min(width, height) / 100)
+        let paddedMinX = max(0, minX - padding)
+        let paddedMinY = max(0, minY - padding)
+        let paddedMaxX = min(width - 1, maxX + padding)
+        let paddedMaxY = min(height - 1, maxY + padding)
+
+        return (paddedMinX, paddedMinY, paddedMaxX - paddedMinX + 1, paddedMaxY - paddedMinY + 1)
+    }
+
     private static func image(named name: String, subdirectory: String) -> UIImage? {
         if let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: subdirectory),
            let bundledImage = UIImage(contentsOfFile: url.path) {
@@ -4562,11 +5088,15 @@ private enum ExerciseImageLoader {
     }
 }
 
+/// The bundled exercise PNGs carry their own border baked in: a grey outer
+/// margin around a white rounded card, with the drawing inset inside that. On
+/// screen it read as a frame around a small picture. `trimmedDetailImage`
+/// crops those uniform borders away so the drawing itself fills the space.
 private struct ExerciseDetailArtwork: View {
     let exercise: Exercise
 
     var body: some View {
-        if let imageName, let image = ExerciseImageLoader.detailImage(named: imageName) {
+        if let imageName, let image = ExerciseImageLoader.trimmedDetailImage(named: imageName) {
             Image(uiImage: image)
                 .resizable()
                 .renderingMode(.original)
@@ -4588,17 +5118,9 @@ private struct ExerciseArtwork: View {
     var size: CGFloat = 46
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                .fill(groupBackground)
-
-            MuscleGroupArtwork(category: category, size: size)
-        }
-        .frame(width: size, height: size)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                .stroke(foreground.opacity(0.18), lineWidth: 1)
-        )
+        MuscleGroupArtwork(category: category, size: size)
+            .frame(width: size, height: size)
+            .systemSurface(groupBackground)
     }
 
     private var groupBackground: LinearGradient {
@@ -4637,11 +5159,12 @@ private struct MuscleGroupArtwork: View {
     }
 
     private var iconSize: CGFloat {
+        // Without the surrounding stroke the symbol can use the full tile.
         switch category {
         case .arms, .freeWeights:
-            size * 0.50
+            size * 0.60
         default:
-            size * 0.54
+            size * 0.64
         }
     }
 
@@ -4696,51 +5219,60 @@ private struct ActiveExerciseCard: View {
     @State private var isPreviousPerformanceExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 10) {
             Button {
+                Haptics.tap()
                 destination = .overview
             } label: {
-                HStack(alignment: .top, spacing: 8) {
-                    ExerciseArtwork(category: exercise.category, size: 38)
+                HStack(alignment: .top, spacing: 12) {
+                    ExerciseArtwork(category: exercise.category, size: 46)
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(appLanguage.ui("Aktuell"))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.accentColor)
+                            .statusPill(Color.accentColor)
+
                         Text(exercise.localizedName(language: appLanguage))
-                            .font(.subheadline.weight(.semibold))
+                            .font(.title3.weight(.bold))
                             .foregroundStyle(.primary)
                             .lineLimit(2)
-                        Text(exercise.target)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                            .minimumScaleFactor(0.85)
 
-                    VStack(alignment: .trailing, spacing: 3) {
-                        WeightBadge(title: "Max", value: exercise.maximumWeight)
                         HStack(spacing: 6) {
+                            Text(exercise.target)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                             if !exercise.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 Image(systemName: "note.text")
-                                    .font(.caption.weight(.semibold))
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .accessibilityLabel(appLanguage.ui("Notiz vorhanden"))
                             }
-                            WeightBadge(title: "1RM", value: exercise.estimatedOneRepMax)
                         }
                     }
-                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 4)
                 }
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .accessibilityLabel("\(exercise.localizedName(language: appLanguage)) \(appLanguage.ui("Übersicht öffnen"))")
+
+            HStack(spacing: 8) {
+                WeightBadge(title: "Max", value: exercise.maximumWeight)
+                WeightBadge(title: "1RM", value: exercise.estimatedOneRepMax)
+            }
 
             ExerciseBadges(exercise: exercise)
 
             DeviceSummary(device: exercise.device)
 
             Button {
-                withAnimation(.snappy(duration: 0.18)) {
+                Haptics.tap()
+                withAnimation(AppMotion.expand) {
                     isPreviousPerformanceExpanded.toggle()
                 }
             } label: {
@@ -4750,11 +5282,13 @@ private struct ActiveExerciseCard: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Spacer(minLength: 0)
-                    Image(systemName: isPreviousPerformanceExpanded ? "chevron.up" : "chevron.down")
+                    Image(systemName: "chevron.down")
                         .font(.caption2.weight(.bold))
+                        .rotationEffect(.degrees(isPreviousPerformanceExpanded ? 180 : 0))
                         .foregroundStyle(.secondary)
                 }
-                .font(.caption.weight(.semibold))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -4762,29 +5296,38 @@ private struct ActiveExerciseCard: View {
             if isPreviousPerformanceExpanded {
                 PreviousPerformanceView(exercise: exercise)
                     .padding(.top, 2)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            VStack(spacing: 5) {
-                ForEach(exercise.sets) { set in
-                    SetRow(exercise: exercise, set: set)
+            VStack(spacing: 7) {
+                ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
+                    SetRow(exercise: exercise, set: set, index: index + 1)
                 }
 
                 Button {
-                    store.addSet(to: exercise)
+                    Haptics.tap()
+                    withAnimation(AppMotion.expand) { store.addSet(to: exercise) }
                 } label: {
-                    Label(appLanguage.ui("Satz hinzufügen"), systemImage: "plus.circle")
+                    Label(appLanguage.ui("Satz hinzufügen"), systemImage: "plus")
+                        .font(.footnote.weight(.semibold))
                         .lineLimit(1)
                         .frame(maxWidth: .infinity)
+                        .frame(height: 38)
+                        .foregroundStyle(Color.accentColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppLayout.compactCornerRadius, style: .continuous)
+                                .strokeBorder(Color.accentColor.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        )
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .buttonStyle(.pressable)
             }
 
             exerciseActionButtons
         }
-        .padding(8)
+        // No own card background: the Form section already draws one. The
+        // "Aktuell" pill at the top marks this as the exercise in progress.
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .neutralCard()
         .navigationDestination(item: $destination) { destination in
             switch destination {
             case .overview:
@@ -4799,25 +5342,12 @@ private struct ActiveExerciseCard: View {
 
     private var exerciseActionButtons: some View {
         HStack(spacing: 8) {
-            Button {
+            CardActionButton(title: appLanguage.ui("Notiz"), icon: "note.text") {
                 destination = .notes
-            } label: {
-                Label(appLanguage.ui("Notiz"), systemImage: "note.text")
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-
-            Button {
+            CardActionButton(title: appLanguage.ui("Gerät"), icon: "slider.horizontal.3") {
                 destination = .deviceSettings
-            } label: {
-                Label(appLanguage.ui("Gerät"), systemImage: "slider.horizontal.3")
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
             .accessibilityLabel(appLanguage.ui("Geräteeinstellungen"))
         }
     }
@@ -4827,50 +5357,93 @@ private struct ActiveExerciseCard: View {
     }
 }
 
+/// Secondary action inside a card. The old `.bordered` buttons were filled with
+/// the accent colour and drew more attention than the sets above them.
+private struct CardActionButton: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            Label(title, systemImage: icon)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .systemSurface(Color.primary.opacity(0.05), minimum: AppLayout.compactCornerRadius)
+        }
+        .buttonStyle(.pressable)
+    }
+}
+
 private struct ExerciseRow: View {
     @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.system.rawValue
+    @AppStorage(WeightUnit.storageKey) private var weightUnitRawValue = WeightUnit.kilograms.rawValue
     let exercise: Exercise
     let onSelect: () -> Void
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 10) {
+        Button {
+            Haptics.tap()
+            onSelect()
+        } label: {
+            HStack(spacing: 12) {
                 ExerciseArtwork(category: exercise.category, size: 44)
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(exercise.localizedName(language: appLanguage))
-                            .font(.subheadline.weight(.semibold))
+                            .font(.callout.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(2)
                         if exercise.isFavorite {
                             Image(systemName: "star.fill")
-                                .font(.caption)
+                                .font(.caption2)
                                 .foregroundStyle(.yellow)
                         }
                     }
-                    Text(exercise.target)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if let group = exercise.supersetGroup {
-                        Text("\(appLanguage.ui("Superset")) \(groupLabel(group))")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.accentColor)
+                    HStack(spacing: 6) {
+                        Text(exercise.target)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if let group = exercise.supersetGroup {
+                            Text("\(appLanguage.ui("Superset")) \(groupLabel(group))")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(Color.accentColor)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                WeightBadge(title: appLanguage.ui("Nächster Satz"), value: nextPlannedWeight)
-                    .fixedSize(horizontal: true, vertical: false)
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(appLanguage.ui("Nächster Satz"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(nextWeightText)
+                        .font(.callout.weight(.bold))
+                        .monospacedDigit()
+                }
+                .fixedSize(horizontal: true, vertical: false)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.tertiary)
             }
             .contentShape(Rectangle())
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .accessibilityLabel("\(exercise.localizedName(language: appLanguage)) \(appLanguage.ui("auswählen"))")
+    }
+
+    private var nextWeightText: String {
+        guard let nextPlannedWeight else { return "–" }
+        return nextPlannedWeight.formattedWeight(unit: WeightUnit.value(for: weightUnitRawValue))
     }
 
     private func groupLabel(_ group: Int) -> String {
@@ -4933,23 +5506,33 @@ private struct CompletedExerciseRow: View {
             .accessibilityLabel("\(exercise.localizedName(language: appLanguage)) \(appLanguage.ui(isExpanded ? "zuklappen" : "bearbeiten"))")
 
             if isExpanded {
-                VStack(spacing: 5) {
-                    ForEach(exercise.sets) { set in
-                        SetRow(exercise: exercise, set: set)
+                VStack(spacing: 7) {
+                    ForEach(Array(exercise.sets.enumerated()), id: \.element.id) { index, set in
+                        SetRow(exercise: exercise, set: set, index: index + 1)
                     }
 
                     Button {
-                        store.addSet(to: exercise, isLogged: true, keepExerciseCompleted: true)
+                        Haptics.tap()
+                        withAnimation(AppMotion.expand) {
+                            store.addSet(to: exercise, isLogged: true, keepExerciseCompleted: true)
+                        }
                     } label: {
-                        Label(appLanguage.ui("Satz hinzufügen"), systemImage: "plus.circle")
+                        Label(appLanguage.ui("Satz hinzufügen"), systemImage: "plus")
+                            .font(.footnote.weight(.semibold))
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
+                            .frame(height: 38)
+                            .foregroundStyle(Color.accentColor)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppLayout.compactCornerRadius, style: .continuous)
+                                    .strokeBorder(Color.accentColor.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                            )
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.pressable)
                 }
 
                 completedActionButtons
+                    .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -4980,25 +5563,12 @@ private struct CompletedExerciseRow: View {
 
     private var completedActionButtons: some View {
         HStack(spacing: 8) {
-            Button {
+            CardActionButton(title: appLanguage.ui("Notiz"), icon: "note.text") {
                 destination = .notes
-            } label: {
-                Label(appLanguage.ui("Notiz"), systemImage: "note.text")
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-
-            Button {
+            CardActionButton(title: appLanguage.ui("Gerät"), icon: "slider.horizontal.3") {
                 destination = .deviceSettings
-            } label: {
-                Label(appLanguage.ui("Gerät"), systemImage: "slider.horizontal.3")
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
             .accessibilityLabel(appLanguage.ui("Geräteeinstellungen"))
         }
     }
@@ -5010,6 +5580,7 @@ private struct SetRow: View {
     @AppStorage(WeightUnit.storageKey) private var weightUnitRawValue = WeightUnit.kilograms.rawValue
     let exercise: Exercise
     let set: ExerciseSet
+    var index: Int = 0
 
     private enum FocusedField: Hashable {
         case reps
@@ -5025,110 +5596,136 @@ private struct SetRow: View {
     var body: some View {
         let recordFlags = store.personalRecordFlags(for: set, in: exercise)
 
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(appLanguage.ui("Satz"))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(recordFlags.hasAny ? .yellow : .secondary)
-                if recordFlags.hasAny {
-                    Label("PR", systemImage: "trophy.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.yellow)
-                }
-                Spacer()
-                Text(set.isLogged ? appLanguage.ui("Erfasst") : appLanguage.ui("Offen"))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(set.isLogged ? .green : .secondary)
-            }
-
-            HStack(spacing: 6) {
-                Menu {
-                    ForEach(WorkoutSetType.allCases) { type in
-                        Button(type.rawValue) {
-                            setType = type
-                            commit(isLogged: currentLoggedState)
-                        }
-                    }
-                } label: {
-                    VStack(spacing: 1) {
-                        Text(setType.shortTitle)
-                            .font(.caption.weight(.bold))
-                        Text(appLanguage.ui("Typ"))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(width: 38, height: AppLayout.minimumTapTarget)
-                    .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    commit(isLogged: !currentLoggedState)
-                } label: {
-                    Image(systemName: set.isLogged ? "checkmark.circle.fill" : "circle")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(set.isLogged ? .green : .secondary)
-                        .frame(width: 26, height: AppLayout.minimumTapTarget)
-                }
-                .buttonStyle(.plain)
-
-                FocusedSetInputField(
-                    title: appLanguage.ui("Wdh"),
-                    text: $repsText,
-                    width: 34,
-                    keyboardType: .numberPad,
-                    focusedField: $focusedField,
-                    focusValue: .reps,
-                    isCompact: true
-                ) {
-                    commit(isLogged: currentLoggedState)
-                }
-
-                FocusedSetInputField(
-                    title: weightUnit.symbol,
-                    text: $weightText,
-                    width: 48,
-                    keyboardType: .decimalPad,
-                    focusedField: $focusedField,
-                    focusValue: .weight,
-                    showsIncreaseHint: exercise.shouldIncreaseWeightNextTime,
-                    isCompact: true
-                ) {
-                    commit(isLogged: currentLoggedState)
-                }
-
-                Spacer(minLength: 0)
-
-                Menu {
-                    Button(appLanguage.ui("Keine RPE")) {
-                        rpe = nil
+        HStack(spacing: 6) {
+            // Set number and type share one control: the number is what you
+            // look for, the type letter only matters when it is not "normal".
+            Menu {
+                ForEach(WorkoutSetType.allCases) { type in
+                    Button(type.rawValue) {
+                        setType = type
                         commit(isLogged: currentLoggedState)
                     }
-                    ForEach(6...10, id: \.self) { value in
-                        Button("RPE \(value)") {
-                            rpe = value
-                            commit(isLogged: true)
-                        }
-                    }
-                } label: {
-                    Text(rpe.map { "RPE \($0)" } ?? "RPE")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .frame(minWidth: 46, minHeight: AppLayout.minimumTapTarget)
-                        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius - 2, style: .continuous))
                 }
-                .buttonStyle(.plain)
+            } label: {
+                VStack(spacing: 0) {
+                    Text(index > 0 ? "\(index)" : "–")
+                        .font(.subheadline.weight(.bold))
+                        .monospacedDigit()
+                    // "A" (working set) is the default and was printed under
+                    // every single row. Only the exceptions are worth showing.
+                    if setType != .normal {
+                        Text(setType.shortTitle)
+                            .font(.system(size: 9, weight: .heavy))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+                .frame(width: 30, height: AppLayout.minimumTapTarget)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 5)
-            .frame(height: AppLayout.minimumTapTarget + 8)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                    .stroke(recordFlags.hasAny ? Color.yellow.opacity(0.42) : Color(.separator).opacity(0.26), lineWidth: 0.75)
-            )
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(appLanguage.ui("Satz")) \(index) · \(setType.rawValue)")
+
+            Button {
+                let willLog = !currentLoggedState
+                if willLog {
+                    Haptics.log()
+                } else {
+                    Haptics.tap()
+                }
+                // Deliberately no `withAnimation` around the store write. It
+                // animated the whole training screen, and every visible set row
+                // recomputed its personal-record flags — which walk the full
+                // history — on each frame of that animation.
+                commit(isLogged: willLog)
+            } label: {
+                ZStack {
+                    Circle()
+                        .strokeBorder(set.isLogged ? Color.clear : Color.secondary.opacity(0.5), lineWidth: 1.8)
+                        .background(Circle().fill(set.isLogged ? Color.green : Color.clear))
+                        .frame(width: 26, height: 26)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .opacity(set.isLogged ? 1 : 0)
+                        .scaleEffect(set.isLogged ? 1 : 0.4)
+                }
+                .frame(width: 38, height: AppLayout.minimumTapTarget)
+                .contentShape(Rectangle())
+                .animation(AppMotion.tap, value: set.isLogged)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(set.isLogged ? appLanguage.ui("Erfasst") : appLanguage.ui("Offen"))
+
+            FocusedSetInputField(
+                title: appLanguage.ui("Wdh"),
+                text: $repsText,
+                width: 34,
+                keyboardType: .numberPad,
+                focusedField: $focusedField,
+                focusValue: .reps,
+                isCompact: true
+            ) {
+                commit(isLogged: currentLoggedState)
+            }
+
+            FocusedSetInputField(
+                title: weightUnit.symbol,
+                text: $weightText,
+                width: 52,
+                keyboardType: .decimalPad,
+                focusedField: $focusedField,
+                focusValue: .weight,
+                showsIncreaseHint: exercise.shouldIncreaseWeightNextTime,
+                isCompact: true
+            ) {
+                commit(isLogged: currentLoggedState)
+            }
+
+            Spacer(minLength: 0)
+
+            if recordFlags.hasAny {
+                Image(systemName: "trophy.fill")
+                    .font(.caption)
+                    .foregroundStyle(.yellow)
+                    .transition(.scale.combined(with: .opacity))
+                    .accessibilityLabel("PR")
+            }
+
+            Menu {
+                Button(appLanguage.ui("Keine RPE")) {
+                    rpe = nil
+                    commit(isLogged: currentLoggedState)
+                }
+                ForEach(6...10, id: \.self) { value in
+                    Button("RPE \(value)") {
+                        rpe = value
+                        commit(isLogged: true)
+                    }
+                }
+            } label: {
+                Text(rpe.map { "\($0)" } ?? "RPE")
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(rpe == nil ? .secondary : Color.accentColor)
+                    .frame(width: 40, height: 34)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppLayout.tightCornerRadius, style: .continuous)
+                            .fill(rpe == nil ? Color.primary.opacity(0.05) : Color.accentColor.opacity(0.14))
+                    )
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(rpe.map { "RPE \($0)" } ?? appLanguage.ui("Keine RPE"))
         }
+        .padding(.horizontal, 6)
+        .frame(height: AppLayout.minimumTapTarget + 8)
+        .background(
+            RoundedRectangle(cornerRadius: AppLayout.compactCornerRadius, style: .continuous)
+                .fill(set.isLogged ? Color.green.opacity(0.10) : Color.primary.opacity(0.03))
+        )
+        .systemSurfaceStroke(strokeColor(recordFlags: recordFlags), lineWidth: recordFlags.hasAny ? 1 : 0.75, minimum: AppLayout.compactCornerRadius)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .padding(.vertical, 2)
         .onAppear {
             syncFields(from: set)
         }
@@ -5144,6 +5741,16 @@ private struct SetRow: View {
             guard focusedField == nil else { return }
             syncFields(from: newSet)
         }
+    }
+
+    /// Takes the flags the body already computed. Recomputing them here meant
+    /// walking the workout history a second time for every row.
+    private func strokeColor(recordFlags: PersonalRecordFlags) -> Color {
+        if recordFlags.hasAny {
+            return Color.yellow.opacity(0.45)
+        }
+
+        return set.isLogged ? Color.green.opacity(0.30) : Color(.separator).opacity(0.22)
     }
 
     private func commit(isLogged: Bool) {
@@ -5201,7 +5808,7 @@ private struct FocusedSetInputField<FocusValue: Hashable>: View {
                 if showsIncreaseHint {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.caption2)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Color.accentColor)
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
@@ -5210,15 +5817,22 @@ private struct FocusedSetInputField<FocusValue: Hashable>: View {
                 .keyboardType(keyboardType)
                 .textFieldStyle(.plain)
                 .submitLabel(.done)
+                // The number is the content; the unit next to it is only a hint.
+                .font(.callout.weight(.semibold).monospacedDigit())
                 .multilineTextAlignment(.trailing)
                 .frame(width: width)
                 .focused($focusedField, equals: focusValue)
                 .onSubmit(onSubmit)
         }
-        .padding(.horizontal, isCompact ? 6 : 8)
+        .padding(.horizontal, isCompact ? 7 : 8)
         .padding(.vertical, isCompact ? 4 : 7)
-        .frame(minHeight: AppLayout.minimumTapTarget)
-        .standardFieldFrame(cornerRadius: isCompact ? AppLayout.cornerRadius - 2 : AppLayout.cornerRadius)
+        .frame(height: isCompact ? 38 : AppLayout.minimumTapTarget)
+        .standardFieldFrame(cornerRadius: isCompact ? AppLayout.tightCornerRadius : AppLayout.compactCornerRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: isCompact ? AppLayout.tightCornerRadius : AppLayout.compactCornerRadius, style: .continuous)
+                .stroke(Color.accentColor, lineWidth: focusedField == focusValue ? 1.6 : 0)
+        )
+        .animation(AppMotion.tap, value: focusedField == focusValue)
         // The entire field is the tap target, not only the narrow text area.
         .contentShape(Rectangle())
         .simultaneousGesture(setFieldTapGesture { focusedField = focusValue })
@@ -5245,7 +5859,7 @@ private struct SetInputField: View {
             .padding(.horizontal, isCompact ? 6 : 8)
             .padding(.vertical, isCompact ? 4 : 7)
             .frame(minHeight: AppLayout.minimumTapTarget)
-            .standardFieldFrame(cornerRadius: isCompact ? AppLayout.cornerRadius - 2 : AppLayout.cornerRadius)
+            .standardFieldFrame(cornerRadius: isCompact ? AppLayout.compactCornerRadius : AppLayout.cornerRadius)
             // The entire field is the tap target, not only the narrow text area.
             .contentShape(Rectangle())
             .simultaneousGesture(setFieldTapGesture { isFocused = true })
@@ -5665,45 +6279,31 @@ private struct CustomExerciseIconOption: Identifiable {
     }
 }
 
-private struct CustomExerciseIconPicker: View {
-    @Binding var selectedID: String
+/// Shows which icon the new exercise will get. There is nothing to choose here:
+/// the icon comes from the muscle group, which is picked one section above.
+/// The old grid offered all 68 catalogue entries, but the tile it drew for each
+/// of them only depends on the group — so every entry of a group looked exactly
+/// the same and the choice appeared to do nothing.
+private struct CustomExerciseIconPreview: View {
+    let category: DeviceCategory
     let appLanguage: AppLanguage
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 72), spacing: 10)
-    ]
-
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(CustomExerciseIconOption.all) { option in
-                Button {
-                    selectedID = option.id
-                } label: {
-                    VStack(spacing: 6) {
-                        ExerciseArtwork(category: option.category, size: 46)
+        HStack(spacing: 12) {
+            ExerciseArtwork(category: category, size: 46)
 
-                        Text(appLanguage.ui(option.title))
-                            .font(.caption2)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 72)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(selectedID == option.id ? Color.accentColor.opacity(0.16) : Color(.secondarySystemGroupedBackground))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(selectedID == option.id ? Color.accentColor : Color.clear, lineWidth: 1.5)
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("\(appLanguage.ui("Icon")) \(appLanguage.ui(option.title))")
+            VStack(alignment: .leading, spacing: 2) {
+                Text(category.localizedName(language: appLanguage))
+                    .font(.callout.weight(.semibold))
+                Text(appLanguage.ui("Ergibt sich aus der Muskelgruppe."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+
+            Spacer(minLength: 0)
         }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -5883,7 +6483,7 @@ private struct DeviceExerciseCreatorView: View {
             }
 
             Section(appLanguage.ui("Icon")) {
-                CustomExerciseIconPicker(selectedID: $iconTemplateID, appLanguage: appLanguage)
+                CustomExerciseIconPreview(category: category, appLanguage: appLanguage)
             }
 
             MuscleDistributionEditor(shares: $muscleDistribution, appLanguage: appLanguage)
@@ -5972,7 +6572,7 @@ private struct MachineCreatorView: View {
             }
 
             Section(appLanguage.ui("Icon")) {
-                CustomExerciseIconPicker(selectedID: $iconTemplateID, appLanguage: appLanguage)
+                CustomExerciseIconPreview(category: category, appLanguage: appLanguage)
             }
 
             MuscleDistributionEditor(shares: $muscleDistribution, appLanguage: appLanguage)
@@ -6285,15 +6885,19 @@ private struct WeightBadge: View {
     let value: Double?
 
     var body: some View {
-        VStack(spacing: 2) {
+        HStack(spacing: 5) {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Text(valueText)
-                .font(.subheadline.bold())
+                .font(.footnote.weight(.bold))
                 .monospacedDigit()
         }
-        .frame(minWidth: 58)
+        .lineLimit(1)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(Color.primary.opacity(0.05), in: Capsule())
+        .accessibilityElement(children: .combine)
     }
 
     private var valueText: String {
@@ -6330,29 +6934,58 @@ private struct StatTile: View {
     }
 }
 
+/// Lays out three metric tiles in equally wide columns, independent of how
+/// long their labels are.
+private struct StatTileRow<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    private let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8), count: 3)
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 8) {
+            content
+        }
+    }
+}
+
+/// Compact metric tile. The value is now the loudest element in the tile — it
+/// used to be grey and smaller than its own caption.
 private struct MiniStatTile: View {
     let title: String
     let value: String
     let icon: String
 
     var body: some View {
-        HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             Image(systemName: icon)
-                .font(.caption)
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.accentColor)
-                .frame(width: 16)
+                // SF Symbols do not all have the same glyph height — "flame"
+                // is taller than "list.bullet". Without a fixed box the tiles
+                // in a row ended up different heights.
+                .frame(height: 15)
+
+            Text(value)
+                .font(.title3.weight(.bold))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
             Text(title)
-                .font(.caption)
-            Spacer(minLength: 6)
-            Text(value)
-                .font(.caption.weight(.semibold))
+                .font(.caption2)
                 .foregroundStyle(.secondary)
-                .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        // Fills the height of the grid row, so all tiles of a row end up the
+        // same size whatever their content measures.
+        .frame(maxHeight: .infinity, alignment: .top)
+        .systemSurface(Color.primary.opacity(0.05), minimum: AppLayout.compactCornerRadius)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -6527,6 +7160,42 @@ private struct EmptyPlanView: View {
 
     private var appLanguage: AppLanguage {
         AppLanguage.value(for: appLanguageRawValue)
+    }
+}
+
+/// Settings entry with a tinted icon tile and a one-line summary of what is
+/// behind it. The old rows were a plain `Label`, so every screen looked the
+/// same and you had to open one to find out what it contained.
+private struct SettingsNavRow: View {
+    let icon: String
+    let tint: Color
+    let title: String
+    let subtitle: String?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: AppLayout.tightCornerRadius, style: .continuous)
+                    .fill(tint.opacity(0.18))
+                Image(systemName: icon)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(tint)
+            }
+            .frame(width: 32, height: 32)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(.vertical, 3)
     }
 }
 

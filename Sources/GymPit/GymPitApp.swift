@@ -90,6 +90,11 @@ struct GymPitApp: App {
                         store.reloadPlanFromSharedStorage()
                         store.clearDeliveredWorkoutNotifications()
                         PhoneWatchConnectivityController.shared.publishCurrentState()
+                    } else {
+                        // Saving is collected and runs just after a change.
+                        // Leaving the foreground forces anything still pending
+                        // out before the app can be suspended.
+                        store.flushPendingWrites()
                     }
                 }
         }

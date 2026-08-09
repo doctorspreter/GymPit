@@ -590,6 +590,13 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     ]
 
     private static let additionalUITexts: [String: [AppLanguage: String]] = [
+        "Ergibt sich aus der Muskelgruppe.": [.english: "Taken from the muscle group.", .french: "Repris du groupe musculaire.", .spanish: "Se toma del grupo muscular.", .italian: "Deriva dal gruppo muscolare.", .russian: "Определяется группой мышц.", .chinese: "由肌肉群决定。", .japanese: "筋肉グループから決まります。"],
+        "Jetzt beenden": [.english: "Finish now", .french: "Terminer", .spanish: "Finalizar ahora", .italian: "Termina ora", .russian: "Завершить", .chinese: "立即结束", .japanese: "終了する"],
+        "Die Einheit wird gespeichert und der Plan wieder auf offen gesetzt.": [.english: "The session is saved and the plan is reset to open.", .french: "La séance est enregistrée et le plan repasse en ouvert.", .spanish: "La sesión se guarda y el plan vuelve a estar abierto.", .italian: "La sessione viene salvata e il piano torna aperto.", .russian: "Тренировка сохраняется, а план снова открывается.", .chinese: "本次训练将被保存，计划重置为未完成。", .japanese: "セッションを保存し、プランを未完了に戻します。"],
+        "Noch keine Daten": [.english: "No data yet", .french: "Pas encore de données", .spanish: "Aún no hay datos", .italian: "Ancora nessun dato", .russian: "Пока нет данных", .chinese: "暂无数据", .japanese: "データがありません"],
+        "Pause, Kalorien, Körpergewicht": [.english: "Rest, calories, body weight", .french: "Repos, calories, poids", .spanish: "Descanso, calorías, peso", .italian: "Recupero, calorie, peso", .russian: "Отдых, калории, вес", .chinese: "休息、卡路里、体重", .japanese: "休憩・カロリー・体重"],
+        "Design, Sprache, Einheit": [.english: "Design, language, unit", .french: "Design, langue, unité", .spanish: "Diseño, idioma, unidad", .italian: "Design, lingua, unità", .russian: "Оформление, язык, единицы", .chinese: "外观、语言、单位", .japanese: "デザイン・言語・単位"],
+        "Health, Home Assistant, CSV": [.english: "Health, Home Assistant, CSV", .french: "Health, Home Assistant, CSV", .spanish: "Health, Home Assistant, CSV", .italian: "Health, Home Assistant, CSV", .russian: "Health, Home Assistant, CSV", .chinese: "Health、Home Assistant、CSV", .japanese: "Health・Home Assistant・CSV"],
         "Training": [.russian: "Тренировка", .chinese: "训练", .japanese: "トレーニング"],
         "Routinen": [.russian: "Программы", .chinese: "训练计划", .japanese: "ルーティン"],
         "Historie": [.russian: "История", .chinese: "历史", .japanese: "履歴"],

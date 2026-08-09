@@ -115,12 +115,12 @@
 		0A1B2C3D4E5F00100100002F /* GymPitBridgeKeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPitBridgeKeychainStore.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F00100100003A /* TrainerRecommendation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainerRecommendation.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F1 /* GymPitWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPitWatchApp.swift; sourceTree = "<group>"; };
+		0A1B2C3D4E5F0010010000F10 /* WatchHealthWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHealthWorkoutManager.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F2 /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F3 /* WatchWorkoutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWorkoutStore.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F5 /* GymPitWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GymPitWatch.entitlements; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		0A1B2C3D4E5F0010010000F10 /* WatchHealthWorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHealthWorkoutManager.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F0010010000F7 /* GymPitWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GymPitWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A1B2C3D4E5F001001000402 /* ExerciseDetailImages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ExerciseDetailImages; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000404 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -562,7 +562,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Sources/GymPit/GymPit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/GymPit/Info.plist;
@@ -591,7 +591,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Sources/GymPit/GymPit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/GymPit/Info.plist;
