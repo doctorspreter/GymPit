@@ -2238,6 +2238,18 @@ private struct ManualWorkoutDraftSet: Identifiable, Equatable {
         )
     }
 
+    /// Keeps the original set id so a corrected workout does not look like a
+    /// different one to Apple Health and HealthPit.
+    init(set: WorkoutSessionSet, weightUnit: WeightUnit) {
+        self.init(
+            id: set.id,
+            type: set.type,
+            reps: set.reps,
+            weightText: formattedWeightInput(set.weight, unit: weightUnit),
+            rpe: set.rpe ?? 0
+        )
+    }
+
     func sessionSet(weightUnit: WeightUnit) -> WorkoutSessionSet {
         WorkoutSessionSet(
             id: id,
@@ -2258,6 +2270,22 @@ private struct ManualWorkoutDraftExercise: Identifiable, Equatable {
     var deviceSettings: DeviceSettings
     var notes: String
     var sets: [ManualWorkoutDraftSet]
+
+    /// Loads an exercise out of a saved workout for editing. Every set that is
+    /// in the history was performed, so all of them start out ticked.
+    init(sessionExercise: WorkoutSessionExercise, weightUnit: WeightUnit) {
+        id = sessionExercise.id
+        catalogID = sessionExercise.catalogID
+        name = sessionExercise.name
+        target = ""
+        category = sessionExercise.category
+        deviceSettings = sessionExercise.deviceSettings
+        notes = sessionExercise.notes
+        let recorded = sessionExercise.sets.isEmpty
+            ? [WorkoutSessionSet(id: UUID(), type: .normal, reps: 12, weight: 0, rpe: nil)]
+            : sessionExercise.sets
+        sets = recorded.map { ManualWorkoutDraftSet(set: $0, weightUnit: weightUnit) }
+    }
 
     init(item: ExerciseCatalogItem, weightUnit: WeightUnit) {
         id = UUID()
@@ -2306,11 +2334,16 @@ private struct ManualWorkoutDraftExercise: Identifiable, Equatable {
     }
 }
 
+/// Enters a workout by hand. With `editedSession` set, the same screen edits a
+/// workout that is already in the history instead of adding a new one — the
+/// fields, the sets and the checkmarks are identical, only the source of the
+/// initial values and the save target differ.
 private struct ManualWorkoutEntryView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: WorkoutStore
     @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.system.rawValue
     @AppStorage(WeightUnit.storageKey) private var weightUnitRawValue = WeightUnit.kilograms.rawValue
+    var editedSession: WorkoutSession?
 
     @State private var planName = ""
     @State private var performedAt = Date()
@@ -2322,10 +2355,15 @@ private struct ManualWorkoutEntryView: View {
     @State private var isAddingExercise = false
     @State private var hasLoadedRoutine = false
 
+    private var isEditing: Bool { editedSession != nil }
+
     var body: some View {
         Form {
             Section(appLanguage.ui("Training")) {
-                if !store.routines.isEmpty {
+                // No routine picker while editing: picking one replaces every
+                // exercise with the routine's plan, which would throw away the
+                // workout that is being corrected.
+                if !store.routines.isEmpty && !isEditing {
                     Picker(appLanguage.ui("Routine"), selection: $selectedRoutineID) {
                         ForEach(store.routines) { routine in
                             Text(routine.name).tag(Optional(routine.id))
@@ -2384,7 +2422,7 @@ private struct ManualWorkoutEntryView: View {
                     .lineLimit(2...6)
             }
         }
-        .navigationTitle(appLanguage.ui("Training nachtragen"))
+        .navigationTitle(appLanguage.ui(isEditing ? "Training bearbeiten" : "Training nachtragen"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -2409,9 +2447,9 @@ private struct ManualWorkoutEntryView: View {
                 }
             }
         }
-        .onAppear(perform: loadInitialRoutineIfNeeded)
+        .onAppear(perform: loadInitialValuesIfNeeded)
         .onChange(of: selectedRoutineID) { _, newValue in
-            guard hasLoadedRoutine else { return }
+            guard hasLoadedRoutine, !isEditing else { return }
             applyRoutine(id: newValue)
         }
         .themedPageBackground()
@@ -2429,9 +2467,14 @@ private struct ManualWorkoutEntryView: View {
         WeightUnit.value(for: weightUnitRawValue)
     }
 
-    private func loadInitialRoutineIfNeeded() {
+    private func loadInitialValuesIfNeeded() {
         guard !hasLoadedRoutine else { return }
         hasLoadedRoutine = true
+
+        if let editedSession {
+            apply(session: editedSession)
+            return
+        }
 
         let routine = store.routines.first(where: { $0.id == store.plan.id })
             ?? store.routines.first(where: { $0.id == store.defaultRoutineID })
@@ -2451,6 +2494,17 @@ private struct ManualWorkoutEntryView: View {
         durationMinutes = estimatedMinutes(for: routine)
     }
 
+    private func apply(session: WorkoutSession) {
+        planName = session.planName
+        performedAt = session.date
+        durationMinutes = max(1, min(1_440, Int(session.durationMinutes.rounded())))
+        caloriesText = session.calories > 0 ? "\(session.calories)" : ""
+        notes = session.notes
+        exercises = session.exercises.map {
+            ManualWorkoutDraftExercise(sessionExercise: $0, weightUnit: weightUnit)
+        }
+    }
+
     private func estimatedMinutes(for routine: WorkoutPlan) -> Int {
         let setCount = routine.exercises.reduce(0) { $0 + $1.sets.count }
         guard setCount > 0 else { return durationMinutes }
@@ -2462,14 +2516,30 @@ private struct ManualWorkoutEntryView: View {
     private func save() {
         let parsedCalories = Int(caloriesText.trimmingCharacters(in: .whitespacesAndNewlines))
         let sessionExercises = exercises.compactMap { $0.sessionExercise(weightUnit: weightUnit) }
-        guard store.addManualHistorySession(
-            planName: planName,
-            performedAt: performedAt,
-            durationMinutes: Double(durationMinutes),
-            calories: parsedCalories,
-            notes: notes,
-            exercises: sessionExercises
-        ) != nil else { return }
+
+        let saved: WorkoutSession?
+        if let editedSession {
+            saved = store.updateHistorySession(
+                id: editedSession.id,
+                planName: planName,
+                performedAt: performedAt,
+                durationMinutes: Double(durationMinutes),
+                calories: parsedCalories,
+                notes: notes,
+                exercises: sessionExercises
+            )
+        } else {
+            saved = store.addManualHistorySession(
+                planName: planName,
+                performedAt: performedAt,
+                durationMinutes: Double(durationMinutes),
+                calories: parsedCalories,
+                notes: notes,
+                exercises: sessionExercises
+            )
+        }
+
+        guard saved != nil else { return }
         dismiss()
     }
 }
@@ -2800,7 +2870,20 @@ private struct SessionDetailView: View {
     @EnvironmentObject private var store: WorkoutStore
     @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.system.rawValue
     @AppStorage(WeightUnit.storageKey) private var weightUnitRawValue = WeightUnit.kilograms.rawValue
-    let session: WorkoutSession
+    @State private var isEditingSession = false
+
+    /// The workout as it was when this screen was pushed. Everything below
+    /// reads `session` instead, which looks the entry up in the history again
+    /// so a correction made in the editor shows up here right away.
+    private let openedSession: WorkoutSession
+
+    init(session: WorkoutSession) {
+        openedSession = session
+    }
+
+    private var session: WorkoutSession {
+        store.history.first { $0.id == openedSession.id } ?? openedSession
+    }
 
     var body: some View {
         List {
@@ -2893,6 +2976,22 @@ private struct SessionDetailView: View {
         }
         .navigationTitle(session.planName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    Haptics.tap()
+                    isEditingSession = true
+                } label: {
+                    Label(appLanguage.ui("Bearbeiten"), systemImage: "square.and.pencil")
+                }
+                .accessibilityLabel(appLanguage.ui("Training bearbeiten"))
+            }
+        }
+        .sheet(isPresented: $isEditingSession) {
+            NavigationStack {
+                ManualWorkoutEntryView(editedSession: session)
+            }
+        }
         .themedPageBackground()
     }
 
@@ -3226,40 +3325,65 @@ private struct WeightInputRow: View {
     }
 }
 
-/// Picks the weight step for one machine. The stored value is always
-/// kilograms; the options shown follow the unit the user works in, so a gym
-/// with pound plates gets 5 lb steps instead of a converted 2.27 kg.
-private struct WeightIncrementPicker: View {
+/// The weight step for one machine, typed in as a number. It used to be a
+/// picker with a fixed preset list, which could not express steps a gym
+/// actually has (a 1.75 kg add-on, a 7.5 kg plate). The stored value is always
+/// kilograms; the field shows and takes the unit the user works in.
+private struct WeightIncrementField: View {
     @Binding var kilograms: Double
     let appLanguage: AppLanguage
     @AppStorage(WeightUnit.storageKey) private var weightUnitRawValue = WeightUnit.kilograms.rawValue
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
-        Picker(appLanguage.ui("Schrittweite Gewicht"), selection: selection) {
-            ForEach(options, id: \.self) { option in
-                Text(WeightIncrement.label(kilograms: option, unit: weightUnit)).tag(option)
-            }
+        HStack(spacing: 12) {
+            Text(appLanguage.ui("Schrittweite Gewicht"))
+            Spacer(minLength: 8)
+            TextField("", text: $text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .monospacedDigit()
+                .focused($isFocused)
+                .frame(maxWidth: 90)
+            Text(weightUnit.symbol)
+                .foregroundStyle(.secondary)
         }
+        .contentShape(Rectangle())
+        .onTapGesture { isFocused = true }
+        .onAppear { text = displayText }
+        .onChange(of: text) { _, newValue in
+            commit(newValue)
+        }
+        .onChange(of: isFocused) { _, focused in
+            // Leaving the field shows what was really stored, so a typo like
+            // "0" or "abc" does not stay on screen as if it had been taken.
+            guard !focused else { return }
+            text = displayText
+        }
+        .onChange(of: weightUnitRawValue) { _, _ in
+            text = displayText
+        }
+
         Text(appLanguage.ui("Legt fest, um wie viel die Plus- und Minus-Tasten auf der Apple Watch das Gewicht ändern."))
             .font(.footnote)
             .foregroundStyle(.secondary)
     }
 
-    /// Keeps a stored value that is not in the preset list selectable, so
-    /// switching units never silently rewrites the machine's step.
-    private var options: [Double] {
-        let presets = WeightIncrement.presetKilograms(for: weightUnit)
-        guard WeightIncrement.matchingPresetKilograms(for: kilograms, unit: weightUnit) == nil else {
-            return presets
-        }
-        return (presets + [kilograms]).sorted()
+    private var displayText: String {
+        let display = weightUnit.displayValue(fromKilograms: kilograms)
+        return ((display * 100).rounded() / 100).formatted(.number.precision(.fractionLength(0...2)))
     }
 
-    private var selection: Binding<Double> {
-        Binding(
-            get: { WeightIncrement.matchingPresetKilograms(for: kilograms, unit: weightUnit) ?? kilograms },
-            set: { kilograms = $0 }
-        )
+    /// Only takes values that are actually usable as a step. Half-typed input
+    /// such as "" or "0," keeps the previous value instead of falling back to
+    /// the default, so the number does not jump around while typing.
+    private func commit(_ newValue: String) {
+        let normalized = newValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        guard let display = Double(normalized), display > 0 else { return }
+        kilograms = WeightIncrement.sanitizedKilograms(weightUnit.kilograms(fromDisplayValue: display))
     }
 
     private var weightUnit: WeightUnit {
@@ -3493,7 +3617,7 @@ private struct ExercisePlanEditor: View {
                 Stepper(value: $restSeconds, in: 0...300, step: 15) {
                     SettingsValueRow(title: appLanguage.ui("Pause nach Satz"), value: "\(restSeconds) s")
                 }
-                WeightIncrementPicker(kilograms: $weightIncrement, appLanguage: appLanguage)
+                WeightIncrementField(kilograms: $weightIncrement, appLanguage: appLanguage)
                 Picker(appLanguage.ui("Superset"), selection: $supersetGroup) {
                     Text(appLanguage.ui("Kein Superset")).tag(0)
                     Text("\(appLanguage.ui("Superset")) A").tag(1)
@@ -3558,16 +3682,22 @@ private struct ProgressRing: View {
             Circle()
                 .stroke(Color.accentColor.opacity(0.16), lineWidth: lineWidth)
 
-            Circle()
-                .trim(from: 0, to: min(1, max(0, progress)))
-                .stroke(
-                    AngularGradient(
-                        colors: [Color.accentColor.opacity(0.55), Color.accentColor],
-                        center: .center
-                    ),
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
+            // No angular gradient here: it wraps the full turn, so its seam
+            // (opaque back to translucent) sits exactly at 12 o'clock, where
+            // the round line cap of the arc start overlaps it — that was the
+            // pale dot at the beginning of the ring. `Color.gradient` shades
+            // top-to-bottom instead and has no seam. The arc is also left out
+            // entirely at 0, because a round cap on a zero-length trim still
+            // paints a dot.
+            if clampedProgress > 0 {
+                Circle()
+                    .trim(from: 0, to: clampedProgress)
+                    .stroke(
+                        Color.accentColor.gradient,
+                        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+            }
 
             Text("\(Int((progress * 100).rounded()))%")
                 .font(.system(size: size * 0.26, weight: .bold, design: .rounded))
@@ -3578,6 +3708,11 @@ private struct ProgressRing: View {
         .animation(AppMotion.value, value: progress)
         .accessibilityElement()
         .accessibilityLabel("\(Int((progress * 100).rounded())) %")
+    }
+
+    private var clampedProgress: Double {
+        guard progress.isFinite else { return 0 }
+        return min(1, max(0, progress))
     }
 }
 
@@ -4705,6 +4840,7 @@ private struct ExerciseRecordsView: View {
     @State private var scale: RecordTimeScale = .ninetyDays
     @State private var chartMetric: ExerciseChartMetric = .maxWeight
     @State private var selectedChartDate: Date?
+    @State private var isEditingExercise = false
 
     var body: some View {
         List {
@@ -4815,12 +4951,38 @@ private struct ExerciseRecordsView: View {
         }
         .navigationTitle(exercise.localizedName(language: appLanguage))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                // Only offered while the exercise is really part of the open
+                // routine. Coming here from the history, the same screen can
+                // show an exercise that no plan contains any more — there
+                // would be nothing to write the change back to.
+                if planExercise != nil {
+                    Button {
+                        Haptics.tap()
+                        isEditingExercise = true
+                    } label: {
+                        Label(appLanguage.ui("Bearbeiten"), systemImage: "slider.horizontal.3")
+                    }
+                    .accessibilityLabel(appLanguage.ui("Übung bearbeiten"))
+                }
+            }
+        }
+        .navigationDestination(isPresented: $isEditingExercise) {
+            if let planExercise {
+                ExercisePlanEditor(exercise: planExercise)
+            }
+        }
         .onChange(of: scale) { _, _ in selectedChartDate = nil }
         .onChange(of: chartMetric) { _, _ in selectedChartDate = nil }
     }
 
+    private var planExercise: Exercise? {
+        store.plan.exercises.first { $0.id == exercise.id }
+    }
+
     private var currentExercise: Exercise {
-        store.plan.exercises.first { $0.id == exercise.id } ?? exercise
+        planExercise ?? exercise
     }
 
     private var trendPoints: [ExerciseTrendPoint] {
@@ -6361,7 +6523,7 @@ private struct DeviceExerciseEditorView: View {
             }
 
             Section(appLanguage.ui("Gewicht")) {
-                WeightIncrementPicker(kilograms: $weightIncrement, appLanguage: appLanguage)
+                WeightIncrementField(kilograms: $weightIncrement, appLanguage: appLanguage)
             }
 
             MuscleDistributionEditor(shares: $muscleDistribution, appLanguage: appLanguage)
@@ -7008,13 +7170,26 @@ private struct MuscleDistributionView: View {
                             .frame(width: 112, alignment: .leading)
 
                         GeometryReader { proxy in
+                            let fraction = barFraction(for: entry)
                             RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
                                 .fill(Color.accentColor.opacity(0.18))
                                 .overlay(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
-                                        .fill(Color.accentColor)
-                                        .frame(width: proxy.size.width * barFraction(for: entry))
+                                    // At 0 % the filled bar was left out
+                                    // entirely instead of being drawn with
+                                    // width 0: a rounded rectangle whose width
+                                    // is below its corner radius still renders
+                                    // a hairline of antialiased colour at the
+                                    // left edge, which read as "a little bit
+                                    // done" on a group that was untouched.
+                                    if fraction > 0.001 {
+                                        RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous)
+                                            .fill(Color.accentColor)
+                                            .frame(width: max(6, proxy.size.width * fraction))
+                                    }
                                 }
+                                // Keeps the fill inside the track when a group
+                                // was trained beyond its planned sets.
+                                .clipShape(RoundedRectangle(cornerRadius: AppLayout.cornerRadius, style: .continuous))
                         }
                         .frame(height: 8)
 
@@ -7040,11 +7215,11 @@ private struct MuscleDistributionView: View {
     }
 
     private func barFraction(for entry: (category: DeviceCategory, completedSets: Double, plannedSets: Double)) -> CGFloat {
-        if showsCompletedProgress {
-            return CGFloat(entry.completedSets) / CGFloat(max(1, entry.plannedSets))
-        }
-
-        return CGFloat(entry.plannedSets) / CGFloat(maxPlannedSets)
+        let raw: CGFloat = showsCompletedProgress
+            ? CGFloat(entry.completedSets) / CGFloat(max(1, entry.plannedSets))
+            : CGFloat(entry.plannedSets) / CGFloat(maxPlannedSets)
+        guard raw.isFinite else { return 0 }
+        return min(1, max(0, raw))
     }
 
     private func valueText(for entry: (category: DeviceCategory, completedSets: Double, plannedSets: Double)) -> String {

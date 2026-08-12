@@ -1329,6 +1329,84 @@ final class WorkoutStore: ObservableObject {
         return session
     }
 
+    /// Rewrites a workout that is already in the history. Used by the editor
+    /// that opens from a history entry, so a set logged with the wrong weight
+    /// can be corrected afterwards instead of only deleted.
+    @discardableResult
+    func updateHistorySession(
+        id: UUID,
+        planName: String,
+        performedAt: Date,
+        durationMinutes: Double,
+        calories: Int?,
+        notes: String,
+        exercises: [WorkoutSessionExercise]
+    ) -> WorkoutSession? {
+        guard let index = history.firstIndex(where: { $0.id == id }) else { return nil }
+
+        let validExercises = exercises.filter { !$0.sets.isEmpty }
+        guard !validExercises.isEmpty else { return nil }
+
+        let previous = history[index]
+        let trimmedName = planName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let updated = sessionWithEstimatedCaloriesIfNeeded(
+            WorkoutSession(
+                id: previous.id,
+                planName: trimmedName.isEmpty ? previous.planName : trimmedName,
+                date: min(performedAt, Date()),
+                notes: trimmedNotes,
+                durationMinutes: max(1, min(1_440, durationMinutes)),
+                calories: max(0, calories ?? 0),
+                exercises: validExercises
+            )
+        )
+
+        guard updated != previous else { return previous }
+
+        history[index] = updated
+        sortHistoryByPerformedDate()
+
+        if latestCompletedSession?.id == updated.id {
+            latestCompletedSession = updated
+        }
+
+        replaceSessionInHealth(previous: previous, updated: updated)
+        uploadSessionToBridge(updated)
+
+        return updated
+    }
+
+    /// Apple Health stores its own copy of a workout, so a corrected session
+    /// has to replace it. The delete query matches on the workout's date range,
+    /// which is why the *old* session is handed to it — after a date change the
+    /// new one would no longer find the sample.
+    private func replaceSessionInHealth(previous: WorkoutSession, updated: WorkoutSession) {
+        guard WorkoutHealthExporter.shared.isAuthorizedForAutomaticSave else {
+            healthExportStatus = .info(AppLanguage.current.ui("Apple Health nicht verbunden"))
+            return
+        }
+
+        healthExportStatus = .info(AppLanguage.current.ui("Apple Health wird aktualisiert..."))
+        WorkoutHealthExporter.shared.delete(previous) { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+                switch result {
+                case .success:
+                    // Without clearing the marker the export below is skipped
+                    // as "already transferred" and Health keeps the old values.
+                    self.healthExportedSessionIDs.remove(updated.id)
+                    self.saveHealthExportedSessionIDs()
+                    self.exportSessionToHealth(updated)
+                case .failure(let error):
+                    self.healthExportStatus = .error(
+                        AppLanguage.current.ui(format: "Apple Health Fehler: %@", error.localizedDescription)
+                    )
+                }
+            }
+        }
+    }
+
     private func importSessionsIntoHistory(_ importedSessions: [WorkoutSession]) -> WorkoutCSVImportSummary {
         let existingIDs = Set(history.map(\.id))
         let existingSignatures = Set(history.map(WorkoutCSVCodec.signature(for:)))

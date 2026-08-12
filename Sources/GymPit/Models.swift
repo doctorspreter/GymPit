@@ -287,28 +287,12 @@ enum WeightUnit: String, Codable, CaseIterable, Identifiable {
 enum WeightIncrement {
     static let defaultKilograms: Double = 2.5
 
-    /// Steps offered in the picker, expressed in the given display unit.
-    static func presets(for unit: WeightUnit) -> [Double] {
-        switch unit {
-        case .kilograms: [0.5, 1, 1.25, 2, 2.5, 5, 10, 20]
-        case .pounds: [1, 2.5, 5, 10, 20, 25, 45]
-        }
-    }
-
-    /// Presets converted to kilograms, ready to store.
-    static func presetKilograms(for unit: WeightUnit) -> [Double] {
-        presets(for: unit).map { unit.kilograms(fromDisplayValue: $0) }
-    }
+    /// Upper bound for a step. Anything larger is a typo rather than a plate.
+    static let maximumKilograms: Double = 50
 
     static func sanitizedKilograms(_ value: Double) -> Double {
         guard value.isFinite, value > 0 else { return defaultKilograms }
-        return min(50, value)
-    }
-
-    /// Matches a stored kilogram value against the preset list of `unit`,
-    /// tolerating the rounding error from the kg↔lb conversion.
-    static func matchingPresetKilograms(for value: Double, unit: WeightUnit) -> Double? {
-        presetKilograms(for: unit).first { abs($0 - value) < 0.005 }
+        return min(maximumKilograms, (value * 100).rounded() / 100)
     }
 
     /// Label for a stored kilogram value, e.g. "2,5 kg" or "5 lbs".

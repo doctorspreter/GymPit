@@ -2,6 +2,38 @@
 
 All notable changes to GymPit are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Saved workouts can be edited. Open an entry in the history and tap Edit to
+  correct its date, duration, calories, note, exercises, sets, weights, and RPE.
+  The corrected workout replaces the previous one in Apple Health and HealthPit
+  instead of being written a second time.
+- The exercise overview has an Edit button that jumps straight into the
+  exercise and device editor, so a machine's settings can be changed from the
+  screen that opens when an exercise is tapped during a workout.
+
+### Changed
+
+- The weight step of an exercise is now typed in as a number instead of being
+  picked from a preset list. Steps a gym actually has, such as 1.75 kg, can be
+  entered directly. The value is still stored in kilograms and shown in the
+  selected unit.
+
+### Fixed
+
+- The progress ring no longer shows a pale dot at the twelve o'clock position.
+  Its angular gradient wrapped the full turn, so the seam between its opaque
+  and translucent ends sat exactly under the round cap at the start of the arc.
+  At 0 % the arc is left out entirely, because a round cap on a zero-length
+  trim still paints a dot.
+- Muscle groups at 0 % no longer show a sliver of the filled bar. The bar was
+  drawn with width 0, and a rounded rectangle narrower than its corner radius
+  still renders a hairline of antialiased colour. The fill is now omitted at 0
+  and clipped to the track, which also keeps it inside the track when a group
+  is trained beyond its planned sets.
+
 ## [26.08] - 2026-08-08
 
 ### Added
