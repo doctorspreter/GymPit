@@ -21,7 +21,7 @@
         }
       ],
       "productID" : "app.gympit.support.small_coffee",
-      "referenceName" : "Kleiner Kaffee",
+      "referenceName" : "Small coffee",
       "type" : "Consumable"
     },
     {
@@ -41,7 +41,7 @@
         }
       ],
       "productID" : "app.gympit.support.supporter",
-      "referenceName" : "Unterstützer",
+      "referenceName" : "Supporter",
       "type" : "Consumable"
     },
     {
@@ -61,7 +61,7 @@
         }
       ],
       "productID" : "app.gympit.support.big_support",
-      "referenceName" : "Große Unterstützung",
+      "referenceName" : "Big support",
       "type" : "Consumable"
     },
     {
@@ -81,7 +81,7 @@
         }
       ],
       "productID" : "app.gympit.support.project",
-      "referenceName" : "Projekt fördern",
+      "referenceName" : "Fund the project",
       "type" : "Consumable"
     }
   ],
@@ -90,7 +90,7 @@
     "_developerTeamID" : "Q3CD6ZPU9J",
     "_failTransactionsEnabled" : false,
     "_lastSynchronizedDate" : 0,
-    "_locale" : "de_DE",
+    "_locale" : "en_US",
     "_storefront" : "DEU",
     "_storeKitErrors" : [
 

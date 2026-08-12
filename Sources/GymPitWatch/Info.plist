@@ -21,9 +21,9 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>GymPit liest während des Trainings Puls und aktive Kalorien, um dir Live-Messwerte auf der Apple Watch anzuzeigen.</string>
+	<string>GymPit reads heart rate and active calories during a workout to show live measurements on Apple Watch.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>GymPit zeichnet dein Krafttraining mit Dauer, Puls und aktiven Kalorien in Apple Health auf.</string>
+	<string>GymPit records your strength workout in Apple Health with its duration, heart rate, and active calories.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

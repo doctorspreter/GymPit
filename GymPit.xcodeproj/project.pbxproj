@@ -310,7 +310,7 @@
 				};
 			};
 			buildConfigurationList = 0A1B2C3D4E5F001001000081 /* Build configuration list for PBXProject "GymPit" */;
-			developmentRegion = de;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				de,

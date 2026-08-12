@@ -29,16 +29,16 @@
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>GymPit kann Trainingsdaten lesen, um Workouts genauer mit Apple Health abzugleichen.</string>
+	<string>GymPit can read workout data to reconcile workouts with Apple Health more accurately.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>GymPit speichert abgeschlossene Krafttrainings inklusive Dauer, Kalorien, Volumen und Übungszusammenfassung in Apple Health.</string>
+	<string>GymPit saves completed strength workouts to Apple Health, including duration, calories, volume, and an exercise summary.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>GymPit verbindet sich auf Wunsch mit deiner lokalen HealthPit-Instanz im Heimnetz.</string>
+	<string>GymPit connects to your local HealthPit instance on your home network when you ask it to.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchScreen</key>

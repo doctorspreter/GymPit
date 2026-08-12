@@ -21,6 +21,10 @@ All notable changes to GymPit are documented in this file.
   entered directly. The value is still stored in kilograms and shown in the
   selected unit.
 
+- The Apple Health and local network permission prompts, the project's
+  development region, and the internal StoreKit product labels are now English.
+  The German product texts stay in place as the German localization.
+
 ### Fixed
 
 - The progress ring no longer shows a pale dot at the twelve o'clock position.
