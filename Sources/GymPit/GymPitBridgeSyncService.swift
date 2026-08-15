@@ -394,7 +394,13 @@ final class GymPitBridgeSyncService {
             let endIndex = min(startIndex + batchSize, sessions.count)
             let sessionsBatch = Array(sessions[startIndex..<endIndex])
             let payloadBatch = sessionsBatch.map(GymPitBridgeImportedWorkoutPayload.init)
-            let batchSummary = try await uploadBatch(payloadBatch, credentials: credentials)
+            // Die Messwerte in HealthPits Sprache reisen mit. Ohne diese Zeile
+            // steht `values` leer in der Nutzlast – die Uebersetzung waere
+            // gebaut, aber nie benutzt.
+            let values = sessionsBatch.flatMap { HealthPitPayload.values(for: $0) }
+            let batchSummary = try await uploadBatch(payloadBatch,
+                                                     healthPitValues: values,
+                                                     credentials: credentials)
             summary.add(batchSummary)
         }
 
@@ -409,8 +415,12 @@ final class GymPitBridgeSyncService {
 
         for startIndex in stride(from: 0, to: sessions.count, by: batchSize) {
             let endIndex = min(startIndex + batchSize, sessions.count)
-            let payloadBatch = sessions[startIndex..<endIndex].map(GymPitBridgeImportedWorkoutPayload.init)
-            summary.add(try await uploadBatch(payloadBatch, credentials: credentials))
+            let sessionsBatch = Array(sessions[startIndex..<endIndex])
+            let payloadBatch = sessionsBatch.map(GymPitBridgeImportedWorkoutPayload.init)
+            let values = sessionsBatch.flatMap { HealthPitPayload.values(for: $0) }
+            summary.add(try await uploadBatch(payloadBatch,
+                                              healthPitValues: values,
+                                              credentials: credentials))
         }
 
         try await reconcile(
