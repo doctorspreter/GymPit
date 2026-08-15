@@ -11,3 +11,6 @@ Release/**/*.xcarchive/
 
 # Experimental copies do not belong in the repository.
 test/
+
+# Arbeitskopie fuer den Umbau auf das HealthPit-Datenmodell.
+tests/gympit_v2/

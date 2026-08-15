@@ -676,13 +676,57 @@ struct ExerciseSet: Codable, Identifiable, Equatable {
     }
 }
 
+/// Die Art eines Satzes.
+///
+/// Der gespeicherte Wert ist ein sprachneutraler Code, kein deutsches Wort.
+/// Frueher stand „Arbeit“ in der Datei: Das ist zugleich Kennung und Anzeige –
+/// eine Uebersetzung haette den Speicher unlesbar gemacht, und HealthPit fuehrt
+/// diese Codes als festen Satz erlaubter Werte (`WRK_SET_TYPE`).
+///
+/// HEALTHPIT-CONVERT-2026-08: `init(from:)` liest die alten deutschen Werte
+/// weiter. Sobald keine Datei von vorher mehr im Umlauf ist, faellt das weg.
 enum WorkoutSetType: String, Codable, CaseIterable, Identifiable {
-    case normal = "Arbeit"
-    case warmup = "Warm-up"
-    case drop = "Drop"
-    case failure = "Failure"
+    case normal = "WORKING"
+    case warmup = "WARMUP"
+    case drop = "DROPSET"
+    case failure = "FAILURE"
 
     var id: String { rawValue }
+
+    /// Wie GymPit die Satzart bisher gespeichert hat.
+    private static let legacyCodes: [String: WorkoutSetType] = [
+        "Arbeit": .normal,
+        "Warm-up": .warmup,
+        "Drop": .drop,
+        "Failure": .failure,
+    ]
+
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        // Erst der heutige Code, dann der alte. Ein unbekannter Wert wird zum
+        // Arbeitssatz statt zum Fehler: Ein Training soll nicht daran
+        // scheitern, dass eine Satzart nicht mehr im Katalog steht.
+        self = WorkoutSetType(rawValue: raw) ?? WorkoutSetType.legacyCodes[raw] ?? .normal
+    }
+
+    /// Anzeigename. Getrennt vom gespeicherten Code, damit Speicher und
+    /// Oberflaeche unabhaengig voneinander sind.
+    var title: String {
+        switch self {
+        case .normal:  "Arbeit"
+        case .warmup:  "Warm-up"
+        case .drop:    "Drop"
+        case .failure: "Failure"
+        }
+    }
+
+    /// Aus einer CSV oder einer aelteren Datei: Code oder Klartext.
+    init(storedOrTitle raw: String) {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        self = WorkoutSetType(rawValue: trimmed)
+            ?? WorkoutSetType.allCases.first { $0.title == trimmed }
+            ?? .normal
+    }
 
     var shortTitle: String {
         switch self {
@@ -751,7 +795,7 @@ struct WorkoutSession: Codable, Identifiable, Equatable {
     var exerciseSummaryText: String {
         exercises.map { exercise in
             let sets = exercise.sets.enumerated().map { index, set in
-                "\(index + 1). \(set.reps)x\(set.weight.formattedWeight(unit: .current))"
+                "\(index + 1). \(set.repetitions)x\(set.weightKilograms.formattedWeight(unit: .current))"
             }.joined(separator: ", ")
             return "\(exercise.name): \(sets)"
         }.joined(separator: "\n")
@@ -799,42 +843,62 @@ struct WorkoutSessionExercise: Codable, Identifiable, Equatable {
     }
 
     var volume: Double {
-        sets.reduce(0) { $0 + Double($1.reps) * $1.weight }
+        sets.reduce(0) { $0 + Double($1.repetitions) * $1.weightKilograms }
     }
 
     var maximumWeight: Double? {
-        sets.map(\.weight).max()
+        sets.map(\.weightKilograms).max()
     }
 
     var bestSetDescription: String {
-        guard let best = sets.max(by: { $0.weight < $1.weight }) else { return "-" }
-        return "\(best.reps) x \(best.weight.formattedWeight(unit: .current))"
+        guard let best = sets.max(by: { $0.weightKilograms < $1.weightKilograms }) else { return "-" }
+        return "\(best.repetitions) x \(best.weightKilograms.formattedWeight(unit: .current))"
     }
 }
 
+/// Ein Satz.
+///
+/// Die Namen folgen dem Entitaetenkatalog von HealthPit: `repetitions` ist
+/// `WRK_SET_REPS`, `weightKilograms` ist `WRK_SET_WEIGHT`,
+/// `perceivedExertion` ist `WRK_SET_RPE`. Damit heisst dieselbe Sache in
+/// beiden Apps gleich, und beim Verschicken muss nichts uebersetzt werden.
+///
+/// Die **gespeicherten Schluessel bleiben die alten** (`reps`, `weight`,
+/// `rpe`). Swift leitet den JSON-Schluessel sonst aus dem Eigenschaftsnamen
+/// ab – bereits gespeicherte Trainings waeren nach dem Umbenennen nicht mehr
+/// lesbar. Die CodingKeys unten halten beides auseinander.
 struct WorkoutSessionSet: Codable, Identifiable, Equatable {
     var id: UUID
     var type: WorkoutSetType
-    var reps: Int
-    var weight: Double
-    var rpe: Int?
+    /// WRK_SET_REPS
+    var repetitions: Int
+    /// WRK_SET_WEIGHT, in Kilogramm – der kanonischen Einheit.
+    var weightKilograms: Double
+    /// WRK_SET_RPE, 1–10.
+    var perceivedExertion: Int?
+    /// WRK_SET_IS_PERSONAL_RECORD
     var isPersonalRecord: Bool
 
     private enum CodingKeys: String, CodingKey {
         case id
         case type
-        case reps
-        case weight
-        case rpe
+        case repetitions = "reps"
+        case weightKilograms = "weight"
+        case perceivedExertion = "rpe"
         case isPersonalRecord
     }
 
-    init(id: UUID, type: WorkoutSetType, reps: Int, weight: Double, rpe: Int?, isPersonalRecord: Bool = false) {
+    init(id: UUID,
+         type: WorkoutSetType,
+         repetitions: Int,
+         weightKilograms: Double,
+         perceivedExertion: Int?,
+         isPersonalRecord: Bool = false) {
         self.id = id
         self.type = type
-        self.reps = reps
-        self.weight = weight
-        self.rpe = rpe
+        self.repetitions = repetitions
+        self.weightKilograms = weightKilograms
+        self.perceivedExertion = perceivedExertion
         self.isPersonalRecord = isPersonalRecord
     }
 
@@ -842,9 +906,9 @@ struct WorkoutSessionSet: Codable, Identifiable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         type = try container.decodeIfPresent(WorkoutSetType.self, forKey: .type) ?? .normal
-        reps = try container.decodeIfPresent(Int.self, forKey: .reps) ?? 0
-        weight = try container.decodeIfPresent(Double.self, forKey: .weight) ?? 0
-        rpe = try container.decodeIfPresent(Int.self, forKey: .rpe)
+        repetitions = try container.decodeIfPresent(Int.self, forKey: .repetitions) ?? 0
+        weightKilograms = try container.decodeIfPresent(Double.self, forKey: .weightKilograms) ?? 0
+        perceivedExertion = try container.decodeIfPresent(Int.self, forKey: .perceivedExertion)
         isPersonalRecord = try container.decodeIfPresent(Bool.self, forKey: .isPersonalRecord) ?? false
     }
 }
@@ -1097,81 +1161,132 @@ struct RoutineTemplate: Identifiable, Equatable {
 
 enum ExerciseCatalog {
     static let all: [ExerciseCatalogItem] = [
-        item("chest-press", "Brustpresse", .chest, "3 x 8-10", 3, 10, 60, 5.0, "Chest Press", "4", "2", "Mittel", "Voll"),
-        item("incline-press", "Schrägbrustpresse", .chest, "3 x 8-10", 3, 10, 45, 5.0, "Incline Chest Press", "4", "2", "Mittel", "Kontrolliert"),
-        item("pec-deck", "Butterfly / Pec Deck", .chest, "3 x 10-12", 3, 12, 45, 4.5, "Pec Deck", "5", "1", "Neutral", "Voll"),
-        item("cable-fly", "Kabelzug Fly", .chest, "3 x 12", 3, 12, 15, 4.5, "Kabelzug", "-", "-", "D-Griffe", "Leicht gebeugt"),
-        item("machine-fly", "Machine Fly", .chest, "3 x 10-12", 3, 12, 40, 4.5, "Fly Machine", "4", "2", "Pads", "Voll"),
-        item("cable-chest-press", "Kabelzug Brustdrücken", .chest, "3 x 10-12", 3, 12, 20, 5.0, "Kabelzug", "-", "-", "D-Griffe", "Kontrolliert"),
-        item("smith-bench-press", "Smith Machine Bankdrücken", .chest, "3 x 8-10", 3, 10, 60, 5.5, "Smith Machine", "Bankposition", "-", "Langhantel", "Bis Brust"),
-        item("push-up", "Liegestütze", .chest, "3 x 12", 3, 12, 0, 4.0, "Körpergewicht", "-", "-", "Schulterbreit", "Voll", kind: .exercise),
+        item("chest-press", "Brustpresse", .chest, "3 x 8-10", 3, 10, 60, 5.0, "Chest Press", "", "", "", ""),
+        item("incline-press", "Schrägbrustpresse", .chest, "3 x 8-10", 3, 10, 45, 5.0, "Incline Chest Press", "", "", "", ""),
+        item("pec-deck", "Butterfly / Pec Deck", .chest, "3 x 10-12", 3, 12, 45, 4.5, "Pec Deck", "", "", "", ""),
+        item("cable-fly", "Kabelzug Fly", .chest, "3 x 12", 3, 12, 15, 4.5, "Kabelzug", "", "", "", ""),
+        item("machine-fly", "Machine Fly", .chest, "3 x 10-12", 3, 12, 40, 4.5, "Fly Machine", "", "", "", ""),
+        item("cable-chest-press", "Kabelzug Brustdrücken", .chest, "3 x 10-12", 3, 12, 20, 5.0, "Kabelzug", "", "", "", ""),
+        item("smith-bench-press", "Smith Machine Bankdrücken", .chest, "3 x 8-10", 3, 10, 60, 5.5, "Smith Machine", "", "", "", ""),
+        item("push-up", "Liegestütze", .chest, "3 x 12", 3, 12, 0, 4.0, "Körpergewicht", "", "", "", "", kind: .exercise),
 
-        item("lat-pulldown", "Latzug", .back, "3 x 8-12", 3, 10, 55, 5.0, "Lat Pulldown", "4", "-", "Breit", "Bis Brust"),
-        item("seated-row", "Rudermaschine", .back, "3 x 8-12", 3, 10, 55, 5.0, "Seated Row", "3", "Brustpolster 2", "Eng", "Voll"),
-        item("seated-machine-row", "Rudern sitzend (Maschine)", .back, "3 x 8-12", 3, 10, 55, 5.0, "Sitzende Rudermaschine", "3", "Brustpolster 2", "Neutral", "Voll"),
-        item("back-extension", "Rückenstrecker", .back, "3 x 12-15", 3, 12, 0, 4.0, "Back Extension", "Hüfte am Pad", "-", "-", "Neutral"),
-        item("assisted-pullup", "Assistierte Klimmzüge", .back, "3 x 6-10", 3, 8, 30, 5.5, "Assisted Pull-Up", "Kniepad", "-", "Breit", "Voll"),
-        item("low-row", "Low Row Maschine", .back, "3 x 8-12", 3, 10, 55, 5.0, "Low Row", "3", "Brustpolster 2", "Neutral", "Voll"),
-        item("t-bar-row-machine", "T-Bar Row Maschine", .back, "3 x 8-10", 3, 10, 50, 5.5, "T-Bar Row", "Brustpolster", "-", "Neutral", "Bis Bauch"),
-        item("pullover-machine", "Pullover Maschine", .back, "3 x 10-12", 3, 12, 35, 4.5, "Pullover", "4", "2", "Pad", "Kontrolliert"),
-        item("cable-row", "Kabelrudern sitzend", .back, "3 x 8-12", 3, 10, 50, 5.0, "Kabelzug Row", "Bank", "-", "Enggriff", "Voll"),
-        item("face-pull", "Face Pull", .back, "3 x 12-15", 3, 12, 20, 4.0, "Kabelzug", "-", "-", "Seil", "Zum Gesicht"),
+        item("lat-pulldown", "Latzug", .back, "3 x 8-12", 3, 10, 55, 5.0, "Lat Pulldown", "", "", "", ""),
+        item("seated-row", "Rudermaschine", .back, "3 x 8-12", 3, 10, 55, 5.0, "Seated Row", "", "", "", ""),
+        item("seated-machine-row", "Rudern sitzend (Maschine)", .back, "3 x 8-12", 3, 10, 55, 5.0, "Sitzende Rudermaschine", "", "", "", ""),
+        item("back-extension", "Rückenstrecker", .back, "3 x 12-15", 3, 12, 0, 4.0, "Back Extension", "", "", "", ""),
+        item("assisted-pullup", "Assistierte Klimmzüge", .back, "3 x 6-10", 3, 8, 30, 5.5, "Assisted Pull-Up", "", "", "", ""),
+        item("low-row", "Low Row Maschine", .back, "3 x 8-12", 3, 10, 55, 5.0, "Low Row", "", "", "", ""),
+        item("t-bar-row-machine", "T-Bar Row Maschine", .back, "3 x 8-10", 3, 10, 50, 5.5, "T-Bar Row", "", "", "", ""),
+        item("pullover-machine", "Pullover Maschine", .back, "3 x 10-12", 3, 12, 35, 4.5, "Pullover", "", "", "", ""),
+        item("cable-row", "Kabelrudern sitzend", .back, "3 x 8-12", 3, 10, 50, 5.0, "Kabelzug Row", "", "", "", ""),
+        item("face-pull", "Face Pull", .back, "3 x 12-15", 3, 12, 20, 4.0, "Kabelzug", "", "", "", ""),
 
-        item("shoulder-press", "Schulterpresse", .shoulders, "3 x 8-10", 3, 8, 35, 5.0, "Shoulder Press", "5", "1", "Neutral", "Bis Kinnlinie"),
-        item("lateral-raise", "Seitheben Maschine", .shoulders, "3 x 12-15", 3, 12, 20, 4.5, "Lateral Raise", "4", "-", "Pads", "Schulterhöhe"),
-        item("rear-delt", "Reverse Butterfly", .shoulders, "3 x 12-15", 3, 12, 25, 4.5, "Reverse Pec Deck", "5", "1", "Horizontal", "Kontrolliert"),
-        item("cable-lateral-raise", "Seitheben Kabelzug", .shoulders, "3 x 12-15", 3, 12, 10, 4.5, "Kabelzug", "-", "-", "D-Griff", "Schulterhöhe"),
-        item("front-raise", "Frontheben", .shoulders, "3 x 10-12", 3, 12, 12.5, 4.0, "Kurzhantel", "-", "-", "Neutral", "Bis Schulterhöhe", kind: .exercise),
-        item("shrug-machine", "Shrug Maschine", .shoulders, "3 x 10-12", 3, 12, 60, 4.5, "Shrug Machine", "Stand", "-", "Neutral", "Oben halten"),
-        item("arnold-press", "Arnold Press", .shoulders, "3 x 8-10", 3, 10, 17.5, 5.0, "Kurzhantel", "Bank", "80 Grad", "Neutral", "Kontrolliert", kind: .exercise),
+        item("shoulder-press", "Schulterpresse", .shoulders, "3 x 8-10", 3, 8, 35, 5.0, "Shoulder Press", "", "", "", ""),
+        item("lateral-raise", "Seitheben Maschine", .shoulders, "3 x 12-15", 3, 12, 20, 4.5, "Lateral Raise", "", "", "", ""),
+        item("rear-delt", "Reverse Butterfly", .shoulders, "3 x 12-15", 3, 12, 25, 4.5, "Reverse Pec Deck", "", "", "", ""),
+        item("cable-lateral-raise", "Seitheben Kabelzug", .shoulders, "3 x 12-15", 3, 12, 10, 4.5, "Kabelzug", "", "", "", ""),
+        item("front-raise", "Frontheben", .shoulders, "3 x 10-12", 3, 12, 12.5, 4.0, "Kurzhantel", "", "", "", "", kind: .exercise),
+        item("shrug-machine", "Shrug Maschine", .shoulders, "3 x 10-12", 3, 12, 60, 4.5, "Shrug Machine", "", "", "", ""),
+        item("arnold-press", "Arnold Press", .shoulders, "3 x 8-10", 3, 10, 17.5, 5.0, "Kurzhantel", "", "", "", "", kind: .exercise),
 
-        item("leg-press", "Beinpresse", .legs, "4 x 8-12", 4, 10, 120, 5.5, "Leg Press", "6", "2", "Füße mittig", "Tief kontrolliert"),
-        item("leg-extension", "Beinstrecker", .legs, "3 x 10-12", 3, 12, 45, 5.0, "Leg Extension", "4", "2", "Pad am Spann", "Oben halten"),
-        item("leg-curl", "Beinbeuger", .legs, "3 x 10-12", 3, 12, 40, 5.0, "Leg Curl", "4", "2", "Pad Achillessehne", "Voll"),
-        item("hip-thrust", "Hip Thrust Maschine", .legs, "3 x 8-12", 3, 10, 70, 5.5, "Hip Thrust", "Gurt eng", "-", "Füße stabil", "Oben halten"),
-        item("abductor", "Abduktor", .legs, "3 x 12-15", 3, 15, 45, 4.0, "Abductor", "5", "2", "Pads", "Kontrolliert"),
-        item("adductor", "Adduktor", .legs, "3 x 12-15", 3, 15, 45, 4.0, "Adductor", "5", "2", "Pads", "Kontrolliert"),
-        item("calf-raise", "Wadenheben", .legs, "4 x 10-15", 4, 12, 50, 4.5, "Calf Raise", "Schulterpads", "-", "Fussballen", "Voll"),
-        item("hack-squat", "Hack Squat", .legs, "4 x 8-12", 4, 10, 100, 5.5, "Hack Squat", "Rückenpad", "-", "Füße mittig", "Tief"),
-        item("smith-squat", "Smith Machine Kniebeuge", .legs, "3 x 8-10", 3, 10, 70, 5.5, "Smith Machine", "Stand", "-", "Langhantel", "Kontrolliert"),
-        item("glute-kickback", "Glute Kickback Maschine", .legs, "3 x 12 je Seite", 3, 12, 30, 4.5, "Glute Kickback", "Brustpolster", "-", "Fussplatte", "Oben halten"),
-        item("seated-calf-raise", "Wadenheben sitzend", .legs, "4 x 12-15", 4, 12, 40, 4.0, "Seated Calf Raise", "Kniepolster", "-", "Fussballen", "Voll"),
-        item("standing-calf-raise", "Wadenheben stehend", .legs, "4 x 10-15", 4, 12, 60, 4.5, "Standing Calf Raise", "Schulterpads", "-", "Fussballen", "Voll"),
+        item("leg-press", "Beinpresse", .legs, "4 x 8-12", 4, 10, 120, 5.5, "Leg Press", "", "", "", ""),
+        item("leg-extension", "Beinstrecker", .legs, "3 x 10-12", 3, 12, 45, 5.0, "Leg Extension", "", "", "", ""),
+        item("leg-curl", "Beinbeuger", .legs, "3 x 10-12", 3, 12, 40, 5.0, "Leg Curl", "", "", "", ""),
+        item("hip-thrust", "Hip Thrust Maschine", .legs, "3 x 8-12", 3, 10, 70, 5.5, "Hip Thrust", "", "", "", ""),
+        item("abductor", "Abduktor", .legs, "3 x 12-15", 3, 15, 45, 4.0, "Abductor", "", "", "", ""),
+        item("adductor", "Adduktor", .legs, "3 x 12-15", 3, 15, 45, 4.0, "Adductor", "", "", "", ""),
+        item("calf-raise", "Wadenheben", .legs, "4 x 10-15", 4, 12, 50, 4.5, "Calf Raise", "", "", "", ""),
+        item("hack-squat", "Hack Squat", .legs, "4 x 8-12", 4, 10, 100, 5.5, "Hack Squat", "", "", "", ""),
+        item("smith-squat", "Smith Machine Kniebeuge", .legs, "3 x 8-10", 3, 10, 70, 5.5, "Smith Machine", "", "", "", ""),
+        item("glute-kickback", "Glute Kickback Maschine", .legs, "3 x 12 je Seite", 3, 12, 30, 4.5, "Glute Kickback", "", "", "", ""),
+        item("seated-calf-raise", "Wadenheben sitzend", .legs, "4 x 12-15", 4, 12, 40, 4.0, "Seated Calf Raise", "", "", "", ""),
+        item("standing-calf-raise", "Wadenheben stehend", .legs, "4 x 10-15", 4, 12, 60, 4.5, "Standing Calf Raise", "", "", "", ""),
 
-        item("biceps-curl", "Bizepscurl Maschine", .arms, "3 x 10-12", 3, 12, 25, 4.0, "Biceps Curl", "4", "Pad 2", "Untergriff", "Voll"),
-        item("triceps-press", "Trizepsdrücken", .arms, "3 x 10-12", 3, 12, 35, 4.0, "Kabelzug", "-", "-", "Seil", "Ellbogen fix"),
-        item("dip-machine", "Dip Maschine", .arms, "3 x 8-12", 3, 10, 45, 5.0, "Dip Machine", "4", "-", "Neutral", "Kontrolliert"),
-        item("preacher-curl", "Scottcurl Maschine", .arms, "3 x 10-12", 3, 12, 25, 4.0, "Preacher Curl", "Sitz 4", "Pad 2", "Untergriff", "Voll"),
-        item("hammer-curl", "Hammercurl", .arms, "3 x 10-12", 3, 12, 15, 4.0, "Kurzhantel", "-", "-", "Neutral", "Voll", kind: .exercise),
-        item("cable-curl", "Kabelcurl", .arms, "3 x 10-12", 3, 12, 25, 4.0, "Kabelzug", "-", "-", "Stange", "Voll"),
-        item("overhead-triceps", "Trizeps über Kopf", .arms, "3 x 10-12", 3, 12, 22.5, 4.0, "Kabelzug", "-", "-", "Seil", "Voll"),
-        item("skull-crusher", "Skull Crusher", .arms, "3 x 8-10", 3, 10, 25, 4.0, "SZ-Stange", "Bank", "-", "Eng", "Kontrolliert", kind: .exercise),
+        item("biceps-curl", "Bizepscurl Maschine", .arms, "3 x 10-12", 3, 12, 25, 4.0, "Biceps Curl", "", "", "", ""),
+        item("triceps-press", "Trizepsdrücken", .arms, "3 x 10-12", 3, 12, 35, 4.0, "Kabelzug", "", "", "", ""),
+        item("dip-machine", "Dip Maschine", .arms, "3 x 8-12", 3, 10, 45, 5.0, "Dip Machine", "", "", "", ""),
+        item("preacher-curl", "Scottcurl Maschine", .arms, "3 x 10-12", 3, 12, 25, 4.0, "Preacher Curl", "", "", "", ""),
+        item("hammer-curl", "Hammercurl", .arms, "3 x 10-12", 3, 12, 15, 4.0, "Kurzhantel", "", "", "", "", kind: .exercise),
+        item("cable-curl", "Kabelcurl", .arms, "3 x 10-12", 3, 12, 25, 4.0, "Kabelzug", "", "", "", ""),
+        item("overhead-triceps", "Trizeps über Kopf", .arms, "3 x 10-12", 3, 12, 22.5, 4.0, "Kabelzug", "", "", "", ""),
+        item("skull-crusher", "Skull Crusher", .arms, "3 x 8-10", 3, 10, 25, 4.0, "SZ-Stange", "", "", "", "", kind: .exercise),
 
-        item("ab-crunch", "Bauchmaschine", .core, "3 x 12-15", 3, 15, 35, 4.0, "Ab Crunch", "4", "2", "Griffe", "Einrollen"),
-        item("crunch-press", "Crunch / Bauchpresse", .core, "3 x 12-15", 3, 15, 35, 4.0, "Bauchpresse", "4", "2", "Griffe", "Einrollen"),
-        item("rotary-torso", "Rumpfrotation", .core, "3 x 12 je Seite", 3, 12, 25, 4.0, "Rotary Torso", "3", "1", "Griffe", "Kontrolliert"),
-        item("plank", "Plank", .core, "3 x 45 s", 3, 45, 0, 3.5, "Matte", "-", "-", "-", "Stabil", kind: .exercise),
-        item("cable-crunch", "Cable Crunch", .core, "3 x 12-15", 3, 15, 35, 4.0, "Kabelzug", "-", "-", "Seil", "Einrollen"),
-        item("hanging-leg-raise", "Hanging Leg Raise", .core, "3 x 10-15", 3, 12, 0, 4.5, "Captain Chair", "-", "-", "Unterarm Pads", "Kontrolliert"),
-        item("roman-chair", "Roman Chair Sit-Up", .core, "3 x 10-12", 3, 12, 0, 4.0, "Roman Chair", "Hüftpad", "-", "-", "Kontrolliert"),
-        item("pallof-press", "Pallof Press", .core, "3 x 12 je Seite", 3, 12, 15, 3.5, "Kabelzug", "-", "-", "D-Griff", "Antirotation"),
+        item("ab-crunch", "Bauchmaschine", .core, "3 x 12-15", 3, 15, 35, 4.0, "Ab Crunch", "", "", "", ""),
+        item("crunch-press", "Crunch / Bauchpresse", .core, "3 x 12-15", 3, 15, 35, 4.0, "Bauchpresse", "", "", "", ""),
+        item("rotary-torso", "Rumpfrotation", .core, "3 x 12 je Seite", 3, 12, 25, 4.0, "Rotary Torso", "", "", "", ""),
+        item("plank", "Plank", .core, "3 x 45 s", 3, 45, 0, 3.5, "Matte", "", "", "", "", kind: .exercise),
+        item("cable-crunch", "Cable Crunch", .core, "3 x 12-15", 3, 15, 35, 4.0, "Kabelzug", "", "", "", ""),
+        item("hanging-leg-raise", "Hanging Leg Raise", .core, "3 x 10-15", 3, 12, 0, 4.5, "Captain Chair", "", "", "", ""),
+        item("roman-chair", "Roman Chair Sit-Up", .core, "3 x 10-12", 3, 12, 0, 4.0, "Roman Chair", "", "", "", ""),
+        item("pallof-press", "Pallof Press", .core, "3 x 12 je Seite", 3, 12, 15, 3.5, "Kabelzug", "", "", "", ""),
 
-        item("treadmill", "Laufband", .cardio, "1 x 20 min", 1, 20, 0, 8.0, "Treadmill", "-", "-", "-", "Tempo frei"),
-        item("bike", "Ergometer", .cardio, "1 x 20 min", 1, 20, 0, 6.8, "Bike", "Sattelhöhe", "-", "-", "Rund treten"),
-        item("cross-trainer", "Crosstrainer", .cardio, "1 x 20 min", 1, 20, 0, 6.0, "Elliptical", "Schrittlänge", "-", "Griffe", "Gleichmäßig"),
-        item("rowing", "Ruderergometer", .cardio, "1 x 10 min", 1, 10, 0, 7.0, "Row Erg", "Dampfer 5", "-", "Griff", "Sauber"),
-        item("stairmaster", "Stairmaster", .cardio, "1 x 15 min", 1, 15, 0, 8.8, "Stair Climber", "-", "-", "Griffe locker", "Level frei"),
-        item("skierg", "SkiErg", .cardio, "1 x 10 min", 1, 10, 0, 7.5, "SkiErg", "Dampfer 5", "-", "Griffe", "Rhythmisch"),
-        item("air-bike", "Air Bike", .cardio, "1 x 12 min", 1, 12, 0, 8.0, "Air Bike", "Sattel", "-", "Griffe", "Gleichmäßig"),
+        item("treadmill", "Laufband", .cardio, "1 x 20 min", 1, 20, 0, 8.0, "Treadmill", "", "", "", ""),
+        item("bike", "Ergometer", .cardio, "1 x 20 min", 1, 20, 0, 6.8, "Bike", "", "", "", ""),
+        item("cross-trainer", "Crosstrainer", .cardio, "1 x 20 min", 1, 20, 0, 6.0, "Elliptical", "", "", "", ""),
+        item("rowing", "Ruderergometer", .cardio, "1 x 10 min", 1, 10, 0, 7.0, "Row Erg", "", "", "", ""),
+        item("stairmaster", "Stairmaster", .cardio, "1 x 15 min", 1, 15, 0, 8.8, "Stair Climber", "", "", "", ""),
+        item("skierg", "SkiErg", .cardio, "1 x 10 min", 1, 10, 0, 7.5, "SkiErg", "", "", "", ""),
+        item("air-bike", "Air Bike", .cardio, "1 x 12 min", 1, 12, 0, 8.0, "Air Bike", "", "", "", ""),
 
-        item("bench-press", "Bankdrücken", .freeWeights, "3 x 5-8", 3, 8, 60, 6.0, "Langhantel", "Bank flach", "-", "Breit", "Brust berühren", kind: .exercise),
-        item("squat", "Kniebeuge", .freeWeights, "3 x 5-8", 3, 8, 80, 6.0, "Rack", "J-Hooks", "Safety Bars", "Langhantel", "Tief stabil", kind: .exercise),
-        item("deadlift", "Kreuzheben", .freeWeights, "3 x 5", 3, 5, 90, 6.0, "Plattform", "-", "-", "Langhantel", "Neutral", kind: .exercise),
-        item("dumbbell-row", "Kurzhantelrudern", .freeWeights, "3 x 10 je Seite", 3, 10, 25, 5.0, "Kurzhantel", "Bank", "-", "Neutral", "Voll", kind: .exercise),
-        item("romanian-deadlift", "Rumänisches Kreuzheben", .freeWeights, "3 x 8-10", 3, 10, 70, 5.5, "Langhantel", "-", "-", "Obergriff", "Bis Dehnung", kind: .exercise),
-        item("goblet-squat", "Goblet Squat", .freeWeights, "3 x 10-12", 3, 12, 25, 5.0, "Kettlebell", "-", "-", "Vor Brust", "Tief", kind: .exercise),
-        item("walking-lunge", "Ausfallschritte gehend", .freeWeights, "3 x 12 je Seite", 3, 12, 20, 5.5, "Kurzhantel", "-", "-", "Neutral", "Kontrolliert", kind: .exercise),
-        item("dumbbell-bench-press", "Kurzhantel Bankdrücken", .freeWeights, "3 x 8-10", 3, 10, 25, 5.5, "Kurzhantel", "Bank flach", "-", "Neutral", "Voll", kind: .exercise)
+        item("bench-press", "Bankdrücken", .freeWeights, "3 x 5-8", 3, 8, 60, 6.0, "Langhantel", "", "", "", "", kind: .exercise),
+        item("squat", "Kniebeuge", .freeWeights, "3 x 5-8", 3, 8, 80, 6.0, "Rack", "", "", "", "", kind: .exercise),
+        item("deadlift", "Kreuzheben", .freeWeights, "3 x 5", 3, 5, 90, 6.0, "Plattform", "", "", "", "", kind: .exercise),
+        item("dumbbell-row", "Kurzhantelrudern", .freeWeights, "3 x 10 je Seite", 3, 10, 25, 5.0, "Kurzhantel", "", "", "", "", kind: .exercise),
+        item("romanian-deadlift", "Rumänisches Kreuzheben", .freeWeights, "3 x 8-10", 3, 10, 70, 5.5, "Langhantel", "", "", "", "", kind: .exercise),
+        item("goblet-squat", "Goblet Squat", .freeWeights, "3 x 10-12", 3, 12, 25, 5.0, "Kettlebell", "", "", "", "", kind: .exercise),
+        item("walking-lunge", "Ausfallschritte gehend", .freeWeights, "3 x 12 je Seite", 3, 12, 20, 5.5, "Kurzhantel", "", "", "", "", kind: .exercise),
+        item("dumbbell-bench-press", "Kurzhantel Bankdrücken", .freeWeights, "3 x 8-10", 3, 10, 25, 5.5, "Kurzhantel", "", "", "", "", kind: .exercise),
+
+        // MARK: Pilates
+        //
+        // Koerpergewichtsuebungen ohne Geraet: Sitz, Lehne und Griff bleiben
+        // leer, dafuer steht in „Geraet“ die Unterlage. Der MET-Wert traegt
+        // die Kalorienrechnung – Pilates liegt je nach Intensitaet bei 2,8
+        // (Mattenarbeit) bis 4,0 (fliessende Serien).
+        item("pilates-hundred", "Hundert", .core, "1 x 100 Atemzüge", 1, 100, 0, 3.0, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-roll-up", "Roll-up", .core, "3 x 8", 3, 8, 0, 3.0, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-roll-over", "Roll-over", .core, "3 x 6", 3, 6, 0, 3.2, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-single-leg-circle", "Beinkreisen einbeinig", .core, "3 x 8 je Seite", 3, 8, 0, 2.8, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-rolling-like-a-ball", "Rollen wie ein Ball", .core, "3 x 8", 3, 8, 0, 3.0, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-single-leg-stretch", "Einbeiniges Strecken", .core, "3 x 10 je Seite", 3, 10, 0, 3.2, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-double-leg-stretch", "Beidbeiniges Strecken", .core, "3 x 10", 3, 10, 0, 3.5, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-scissors", "Schere", .core, "3 x 10 je Seite", 3, 10, 0, 3.2, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-criss-cross", "Criss-Cross", .core, "3 x 10 je Seite", 3, 10, 0, 3.5, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-spine-stretch", "Wirbelsäulendehnung", .core, "3 x 6", 3, 6, 0, 2.5, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-saw", "Säge", .core, "3 x 6 je Seite", 3, 6, 0, 2.8, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-swan", "Schwan", .core, "3 x 8", 3, 8, 0, 3.0, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-swimming", "Schwimmen", .core, "1 x 60 s", 1, 60, 0, 3.5, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-leg-pull-front", "Beinzug vorwärts", .core, "3 x 6 je Seite", 3, 6, 0, 3.8, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-side-kick", "Seitliches Beinheben", .core, "3 x 10 je Seite", 3, 10, 0, 3.0, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-teaser", "Teaser", .core, "3 x 6", 3, 6, 0, 4.0, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-seal", "Seehund", .core, "3 x 8", 3, 8, 0, 2.8, "Matte", "", "", "", "", kind: .exercise),
+        item("pilates-shoulder-bridge", "Schulterbrücke", .core, "3 x 10", 3, 10, 0, 3.0, "Matte", "", "", "", "", kind: .exercise),
+
+        // MARK: Yoga
+        //
+        // Hatha und ruhige Haltungen liegen bei MET 2,5, fliessende Serien und
+        // Kraefthaltungen bei 3,5 bis 4,0.
+        item("yoga-downward-dog", "Herabschauender Hund", .core, "3 x 45 s", 3, 45, 0, 3.0, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-upward-dog", "Heraufschauender Hund", .core, "3 x 30 s", 3, 30, 0, 2.8, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-plank", "Brett", .core, "3 x 45 s", 3, 45, 0, 3.5, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-chaturanga", "Chaturanga", .core, "3 x 8", 3, 8, 0, 4.0, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-warrior-one", "Krieger I", .legs, "3 x 45 s je Seite", 3, 45, 0, 3.2, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-warrior-two", "Krieger II", .legs, "3 x 45 s je Seite", 3, 45, 0, 3.2, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-warrior-three", "Krieger III", .legs, "3 x 30 s je Seite", 3, 30, 0, 3.8, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-triangle", "Dreieck", .core, "3 x 45 s je Seite", 3, 45, 0, 2.8, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-chair", "Stuhl", .legs, "3 x 45 s", 3, 45, 0, 3.5, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-tree", "Baum", .legs, "3 x 60 s je Seite", 3, 60, 0, 2.5, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-bridge", "Brücke", .legs, "3 x 45 s", 3, 45, 0, 2.8, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-cobra", "Kobra", .core, "3 x 30 s", 3, 30, 0, 2.5, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-childs-pose", "Stellung des Kindes", .core, "3 x 60 s", 3, 60, 0, 2.0, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-cat-cow", "Katze-Kuh", .core, "3 x 10", 3, 10, 0, 2.3, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-pigeon", "Taube", .legs, "3 x 60 s je Seite", 3, 60, 0, 2.5, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-seated-forward-bend", "Sitzende Vorbeuge", .core, "3 x 60 s", 3, 60, 0, 2.3, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-boat", "Boot", .core, "3 x 30 s", 3, 30, 0, 3.5, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-side-plank", "Seitliches Brett", .core, "3 x 30 s je Seite", 3, 30, 0, 3.5, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-sun-salutation", "Sonnengruß", .cardio, "3 Runden", 3, 1, 0, 4.0, "Matte", "", "", "", "", kind: .exercise),
+        item("yoga-savasana", "Endentspannung", .core, "1 x 5 min", 1, 5, 0, 1.5, "Matte", "", "", "", "", kind: .exercise),
+
     ]
 
     static func item(for id: String) -> ExerciseCatalogItem? {

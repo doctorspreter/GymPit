@@ -136,10 +136,12 @@ enum WorkoutCSVCodec {
                         exercise.notes,
                         set.id.uuidString,
                         String(setIndex + 1),
-                        set.type.rawValue,
-                        String(set.reps),
-                        String(set.weight),
-                        set.rpe.map(String.init) ?? ""
+                        // Klartext in der CSV: Sie liest ein Mensch, nicht
+                        // die Bruecke.
+                        set.type.title,
+                        String(set.repetitions),
+                        String(set.weightKilograms),
+                        set.perceivedExertion.map(String.init) ?? ""
                     ])
                 }
             }
@@ -180,10 +182,12 @@ enum WorkoutCSVCodec {
             let exerciseID = uuid(value("exercise_id", in: row, using: columnIndex))
             let set = WorkoutSessionSet(
                 id: uuid(value("set_id", in: row, using: columnIndex)),
-                type: WorkoutSetType(rawValue: value("set_type", in: row, using: columnIndex)) ?? .normal,
-                reps: int(value("reps", in: row, using: columnIndex)),
-                weight: double(value("weight", in: row, using: columnIndex)),
-                rpe: optionalInt(value("rpe", in: row, using: columnIndex))
+                // Beim Einlesen zaehlt beides: der neutrale Code und der
+                // Klartext, den eine frueher exportierte CSV traegt.
+                type: WorkoutSetType(storedOrTitle: value("set_type", in: row, using: columnIndex)),
+                repetitions: int(value("reps", in: row, using: columnIndex)),
+                weightKilograms: double(value("weight", in: row, using: columnIndex)),
+                perceivedExertion: optionalInt(value("rpe", in: row, using: columnIndex))
             )
 
             sessionBuilders[sessionID]?.append(
@@ -1547,9 +1551,9 @@ final class WorkoutStore: ObservableObject {
     private func trainerSnapshot(_ set: WorkoutSessionSet) -> TrainerSetSnapshot {
         TrainerSetSnapshot(
             kind: trainerSetKind(set.type),
-            repetitions: set.reps,
-            weightKilograms: set.weight,
-            rpe: set.rpe
+            repetitions: set.repetitions,
+            weightKilograms: set.weightKilograms,
+            rpe: set.perceivedExertion
         )
     }
 
@@ -1613,14 +1617,15 @@ final class WorkoutStore: ObservableObject {
     func recordSummaries(for exercise: Exercise) -> [ExerciseRecordSummary] {
         let historical = historicalExercises(for: exercise)
         let loggedSets = historical.flatMap(\.sets) + exercise.sets.filter(\.isLogged).map {
-            WorkoutSessionSet(id: $0.id, type: $0.type, reps: $0.reps, weight: $0.weight, rpe: $0.rpe)
+            WorkoutSessionSet(id: $0.id, type: $0.type, repetitions: $0.reps,
+                              weightKilograms: $0.weight, perceivedExertion: $0.rpe)
         }
 
-        let maxWeight = loggedSets.map(\.weight).max()
-        let bestSetVolume = loggedSets.map { Double($0.reps) * $0.weight }.max()
+        let maxWeight = loggedSets.map(\.weightKilograms).max()
+        let bestSetVolume = loggedSets.map { Double($0.repetitions) * $0.weightKilograms }.max()
         let bestOneRepMax = loggedSets
-            .filter { $0.reps > 0 && $0.weight > 0 }
-            .map { $0.weight * (1 + Double($0.reps) / 30) }
+            .filter { $0.repetitions > 0 && $0.weightKilograms > 0 }
+            .map { $0.weightKilograms * (1 + Double($0.repetitions) / 30) }
             .max()
         let bestHistoricalSessionVolume = historical.map(\.volume).max()
         let bestSessionVolume = max(bestHistoricalSessionVolume ?? 0, exercise.volume)
@@ -1646,7 +1651,8 @@ final class WorkoutStore: ObservableObject {
                 date: session.date,
                 volume: sessionExercise.volume,
                 maxWeight: sessionExercise.maximumWeight ?? 0,
-                bestSetVolume: sessionExercise.sets.map { Double($0.reps) * $0.weight }.max() ?? 0
+                bestSetVolume: sessionExercise.sets
+                    .map { Double($0.repetitions) * $0.weightKilograms }.max() ?? 0
             )
         }
         .sorted { $0.date < $1.date }
@@ -1675,11 +1681,25 @@ final class WorkoutStore: ObservableObject {
         let oneRepMax = set.weight * (1 + Double(max(0, set.reps)) / 30)
         let lastLoggedSetID = exercise.sets.last(where: \.isLogged)?.id
 
+        // In Teilschritten statt in einem Ausdruck: Hier treffen zwei
+        // Satztypen aufeinander, und der Typpruefer kapituliert daran.
+        let bestHistoricalVolume = historicalSets
+            .map { Double($0.repetitions) * $0.weightKilograms }
+            .max() ?? 0
+        let bestHistoricalWeight = historicalSets.map(\.weightKilograms).max() ?? 0
+        let bestHistoricalOneRepMax = historicalSets
+            .filter { $0.repetitions > 0 && $0.weightKilograms > 0 }
+            .map { $0.weightKilograms * (1 + Double($0.repetitions) / 30) }
+            .max() ?? 0
+        let bestHistoricalSessionVolume = historical.map(\.volume).max() ?? 0
+
         return PersonalRecordFlags(
-            setVolume: setVolume > 0 && setVolume > (historicalSets.map { Double($0.reps) * $0.weight }.max() ?? 0),
-            maxWeight: set.weight > 0 && set.weight > (historicalSets.map(\.weight).max() ?? 0),
-            estimatedOneRepMax: oneRepMax > 0 && oneRepMax > (historicalSets.filter { $0.reps > 0 && $0.weight > 0 }.map { $0.weight * (1 + Double($0.reps) / 30) }.max() ?? 0),
-            sessionVolume: set.id == lastLoggedSetID && exercise.volume > 0 && exercise.volume > (historical.map(\.volume).max() ?? 0)
+            setVolume: setVolume > 0 && setVolume > bestHistoricalVolume,
+            maxWeight: set.weight > 0 && set.weight > bestHistoricalWeight,
+            estimatedOneRepMax: oneRepMax > 0 && oneRepMax > bestHistoricalOneRepMax,
+            sessionVolume: set.id == lastLoggedSetID
+                && exercise.volume > 0
+                && exercise.volume > bestHistoricalSessionVolume
         )
     }
 
@@ -1853,9 +1873,9 @@ final class WorkoutStore: ObservableObject {
                     return WorkoutSessionSet(
                         id: $0.id,
                         type: $0.type,
-                        reps: $0.reps,
-                        weight: $0.weight,
-                        rpe: $0.rpe,
+                        repetitions: $0.reps,
+                        weightKilograms: $0.weight,
+                        perceivedExertion: $0.rpe,
                         isPersonalRecord: recordFlags.hasAny
                     )
                 }

@@ -2244,9 +2244,9 @@ private struct ManualWorkoutDraftSet: Identifiable, Equatable {
         self.init(
             id: set.id,
             type: set.type,
-            reps: set.reps,
-            weightText: formattedWeightInput(set.weight, unit: weightUnit),
-            rpe: set.rpe ?? 0
+            reps: set.repetitions,
+            weightText: formattedWeightInput(set.weightKilograms, unit: weightUnit),
+            rpe: set.perceivedExertion ?? 0
         )
     }
 
@@ -2254,9 +2254,9 @@ private struct ManualWorkoutDraftSet: Identifiable, Equatable {
         WorkoutSessionSet(
             id: id,
             type: type,
-            reps: max(1, min(999, reps)),
-            weight: parsedWeightInput(weightText, unit: weightUnit),
-            rpe: rpe == 0 ? nil : rpe
+            repetitions: max(1, min(999, reps)),
+            weightKilograms: parsedWeightInput(weightText, unit: weightUnit),
+            perceivedExertion: rpe == 0 ? nil : rpe
         )
     }
 }
@@ -2282,7 +2282,8 @@ private struct ManualWorkoutDraftExercise: Identifiable, Equatable {
         deviceSettings = sessionExercise.deviceSettings
         notes = sessionExercise.notes
         let recorded = sessionExercise.sets.isEmpty
-            ? [WorkoutSessionSet(id: UUID(), type: .normal, reps: 12, weight: 0, rpe: nil)]
+            ? [WorkoutSessionSet(id: UUID(), type: .normal, repetitions: 12,
+                                 weightKilograms: 0, perceivedExertion: nil)]
             : sessionExercise.sets
         sets = recorded.map { ManualWorkoutDraftSet(set: $0, weightUnit: weightUnit) }
     }
@@ -2783,7 +2784,7 @@ private struct ManualWorkoutSetEditor: View {
     private var typeMenu: some View {
         Menu {
             ForEach(WorkoutSetType.allCases) { type in
-                Button(type.rawValue) {
+                Button(type.title) {
                     set.type = type
                 }
             }
@@ -2952,11 +2953,11 @@ private struct SessionDetailView: View {
                                 .font(.caption.weight(.semibold))
                                 .frame(width: 24, height: 24)
                                 .background(Color(.secondarySystemGroupedBackground), in: Circle())
-                            Text(set.type.rawValue)
+                            Text(set.type.title)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            Text("\(set.reps) x \(set.weight.formattedWeight(unit: weightUnit))")
+                            Text(setSummary(set))
                                 .monospacedDigit()
                             if setHasRecord(set, in: exercise) {
                                 Image(systemName: "trophy.fill")
@@ -2964,7 +2965,7 @@ private struct SessionDetailView: View {
                                     .foregroundStyle(.yellow)
                                     .accessibilityLabel(appLanguage.ui("Rekord"))
                             }
-                            if let rpe = set.rpe {
+                            if let rpe = set.perceivedExertion {
                                 Text("RPE \(rpe)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -3053,20 +3054,28 @@ private struct SessionDetailView: View {
             (exercise.volume > previousVolume && exercise.volume > 0)
     }
 
+    /// „12 x 80 kg“ – ausserhalb des ViewBuilders gebaut, weil der
+    /// Typpruefer an der Zeichenkette samt Einheitenformatierung scheitert.
+    private func setSummary(_ set: WorkoutSessionSet) -> String {
+        let weight = set.weightKilograms.formattedWeight(unit: weightUnit)
+        return "\(set.repetitions) x \(weight)"
+    }
+
     private func setHasRecord(_ set: WorkoutSessionSet, in exercise: WorkoutSessionExercise) -> Bool {
         let historicalSets = historicalExercises(before: exercise).flatMap(\.sets)
-        let setVolume = Double(set.reps) * set.weight
-        let estimatedOneRepMax = set.weight * (1 + Double(max(0, set.reps)) / 30)
+        let setVolume = Double(set.repetitions) * set.weightKilograms
+        let estimatedOneRepMax = set.weightKilograms * (1 + Double(max(0, set.repetitions)) / 30)
 
-        let previousSetVolume = historicalSets.map { Double($0.reps) * $0.weight }.max() ?? 0
-        let previousMaxWeight = historicalSets.map(\.weight).max() ?? 0
+        let previousSetVolume = historicalSets
+            .map { Double($0.repetitions) * $0.weightKilograms }.max() ?? 0
+        let previousMaxWeight = historicalSets.map(\.weightKilograms).max() ?? 0
         let previousEstimatedOneRepMax = historicalSets
-            .filter { $0.reps > 0 && $0.weight > 0 }
-            .map { $0.weight * (1 + Double($0.reps) / 30) }
+            .filter { $0.repetitions > 0 && $0.weightKilograms > 0 }
+            .map { $0.weightKilograms * (1 + Double($0.repetitions) / 30) }
             .max() ?? 0
 
         return (setVolume > previousSetVolume && setVolume > 0) ||
-            (set.weight > previousMaxWeight && set.weight > 0) ||
+            (set.weightKilograms > previousMaxWeight && set.weightKilograms > 0) ||
             (estimatedOneRepMax > previousEstimatedOneRepMax && estimatedOneRepMax > 0)
     }
 }
@@ -4147,7 +4156,7 @@ private struct CompletionOverviewPage: View {
     }
 
     private var totalReps: Int {
-        session.exercises.flatMap(\.sets).reduce(0) { $0 + $1.reps }
+        session.exercises.flatMap(\.sets).reduce(0) { $0 + $1.repetitions }
     }
 
     private var appLanguage: AppLanguage {
@@ -4201,9 +4210,11 @@ private struct CompletionHighlightsPage: View {
 
     private var heaviestSetText: String {
         guard let entry = session.exercises.compactMap({ exercise in
-            exercise.sets.max(by: { $0.weight < $1.weight }).map { (exercise, $0) }
-        }).max(by: { $0.1.weight < $1.1.weight }) else { return "-" }
-        return "\(entry.0.localizedName(language: appLanguage)) · \(entry.1.reps) x \(entry.1.weight.formattedWeight(unit: weightUnit))"
+            exercise.sets.max(by: { $0.weightKilograms < $1.weightKilograms }).map { (exercise, $0) }
+        }).max(by: { $0.1.weightKilograms < $1.1.weightKilograms }) else { return "-" }
+        let name = entry.0.localizedName(language: appLanguage)
+        let weight = entry.1.weightKilograms.formattedWeight(unit: weightUnit)
+        return "\(name) · \(entry.1.repetitions) x \(weight)"
     }
 
     private var topVolumeExerciseText: String {
@@ -4212,13 +4223,14 @@ private struct CompletionHighlightsPage: View {
     }
 
     private var averageWeightText: String {
-        let totalReps = session.exercises.flatMap(\.sets).reduce(0) { $0 + $1.reps }
+        let totalReps = session.exercises.flatMap(\.sets).reduce(0) { $0 + $1.repetitions }
         guard totalReps > 0 else { return "-" }
         return (session.totalVolume / Double(totalReps)).formattedWeight(unit: weightUnit)
     }
 
     private var bestSetVolume: Double? {
-        session.exercises.flatMap(\.sets).map { Double($0.reps) * $0.weight }.max()
+        session.exercises.flatMap(\.sets)
+            .map { Double($0.repetitions) * $0.weightKilograms }.max()
     }
 
     private var appLanguage: AppLanguage {
@@ -5763,7 +5775,7 @@ private struct SetRow: View {
             // look for, the type letter only matters when it is not "normal".
             Menu {
                 ForEach(WorkoutSetType.allCases) { type in
-                    Button(type.rawValue) {
+                    Button(type.title) {
                         setType = type
                         commit(isLogged: currentLoggedState)
                     }
@@ -5785,7 +5797,7 @@ private struct SetRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(appLanguage.ui("Satz")) \(index) · \(setType.rawValue)")
+            .accessibilityLabel("\(appLanguage.ui("Satz")) \(index) · \(setType.title)")
 
             Button {
                 let willLog = !currentLoggedState

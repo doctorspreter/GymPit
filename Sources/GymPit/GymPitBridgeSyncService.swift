@@ -42,10 +42,18 @@ struct GymPitBridgeSession {
 struct GymPitBridgeImportedWorkoutBatchPayload: Encodable {
     let deviceID: String
     let workouts: [GymPitBridgeImportedWorkoutPayload]
+    /// 2 = die Werte tragen die Kennungen aus HealthPits Katalog.
+    ///
+    /// Die Gegenstelle erkennt daran, dass sie `values` auswerten kann und
+    /// nichts mehr uebersetzen muss. Aeltere Fassungen ignorieren beides.
+    let modelVersion: Int
+    /// Messwerte in HealthPits Sprache, je Uebung und Satz.
+    let values: [HealthPitValue]
 
     enum CodingKeys: String, CodingKey {
         case deviceID = "device_id"
-        case workouts
+        case workouts, values
+        case modelVersion = "model_version"
     }
 }
 
@@ -428,6 +436,7 @@ final class GymPitBridgeSyncService {
 
     private func uploadBatch(
         _ workouts: [GymPitBridgeImportedWorkoutPayload],
+        healthPitValues: [HealthPitValue] = [],
         credentials: GymPitBridgeCredentials
     ) async throws -> GymPitBridgeUploadSummary {
         var endpoint = credentials.baseURL
@@ -435,7 +444,9 @@ final class GymPitBridgeSyncService {
 
         let payload = GymPitBridgeImportedWorkoutBatchPayload(
             deviceID: credentials.deviceID,
-            workouts: workouts
+            workouts: workouts,
+            modelVersion: HealthPitPayload.modelVersion,
+            values: healthPitValues
         )
         var request = authorizedRequest(url: endpoint, method: "POST", credentials: credentials)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -703,9 +714,9 @@ private extension GymPitBridgeImportedSetPayload {
         id = set.id.uuidString
         self.index = index
         type = set.type.rawValue
-        reps = set.reps
-        weightKg = set.weight
-        rpe = set.rpe
+        reps = set.repetitions
+        weightKg = set.weightKilograms
+        rpe = set.perceivedExertion
         isPersonalRecord = set.isPersonalRecord
     }
 }

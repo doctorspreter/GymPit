@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		0A1B2C3D4E5F001001000001 /* GymPitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000011 /* GymPitApp.swift */; };
 		0A1B2C3D4E5F001001000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000012 /* ContentView.swift */; };
+		0AAA2000 /* HealthPitMetricIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AAA1000 /* HealthPitMetricIDs.swift */; };
+		0AAA2001 /* HealthPitPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AAA1001 /* HealthPitPayload.swift */; };
 		0A1B2C3D4E5F001001000003 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000013 /* Models.swift */; };
 		0A1B2C3D4E5F001001000004 /* WorkoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000014 /* WorkoutStore.swift */; };
 		0A1B2C3D4E5F001001000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F001001000015 /* Assets.xcassets */; };
@@ -92,6 +94,8 @@
 		0A1B2C3D4E5F001001000006 /* GymPit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GymPit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A1B2C3D4E5F001001000011 /* GymPitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymPitApp.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		0AAA1000 /* HealthPitMetricIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthPitMetricIDs.swift; sourceTree = "<group>"; };
+		0AAA1001 /* HealthPitPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthPitPayload.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000013 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000014 /* WorkoutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutStore.swift; sourceTree = "<group>"; };
 		0A1B2C3D4E5F001001000015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -156,6 +160,8 @@
 			children = (
 				0A1B2C3D4E5F001001000011 /* GymPitApp.swift */,
 				0A1B2C3D4E5F001001000012 /* ContentView.swift */,
+				0AAA1000 /* HealthPitMetricIDs.swift */,
+				0AAA1001 /* HealthPitPayload.swift */,
 				0A1B2C3D4E5F001001000013 /* Models.swift */,
 				0A1B2C3D4E5F001001000014 /* WorkoutStore.swift */,
 				0A1B2C3D4E5F001001000021 /* SharedWorkoutActivity.swift */,
@@ -374,6 +380,8 @@
 			files = (
 				0A1B2C3D4E5F001001000001 /* GymPitApp.swift in Sources */,
 				0A1B2C3D4E5F001001000002 /* ContentView.swift in Sources */,
+				0AAA2000 /* HealthPitMetricIDs.swift in Sources */,
+				0AAA2001 /* HealthPitPayload.swift in Sources */,
 				0A1B2C3D4E5F001001000003 /* Models.swift in Sources */,
 				0A1B2C3D4E5F001001000004 /* WorkoutStore.swift in Sources */,
 				0A1B2C3D4E5F001001000201 /* SharedWorkoutActivity.swift in Sources */,

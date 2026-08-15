@@ -1,5 +1,31 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **38 Pilates and yoga exercises**, each with a MET value so calories can be
+  worked out from body weight and duration.
+- **GymPit speaks HealthPit's identifiers.** A set now travels as
+  `WRK_SET_WEIGHT`, `WRK_SET_REPS`, `WRK_SET_VOLUME`, `WRK_SET_RPE` instead of
+  GymPit's own field names. The translation table in the middle — which both
+  sides had to maintain — is gone. The identifiers come from a generated file
+  (`HealthPitMetricIDs.swift`); renaming one in HealthPit breaks this build
+  instead of letting the two apps drift apart quietly.
+- Manually created exercises travel as `custom-<uuid>` with their plain name,
+  so they arrive as their own value rather than being dropped.
+- Set types are sent as language-neutral codes (`WORKING`, `WARMUP`,
+  `DROPSET`, `FAILURE`). The German words would change with a translation and
+  are useless as identifiers.
+
+### Changed
+
+- **Equipment presets removed from the catalogue.** Seat, backrest, handle and
+  range start empty. Before, adding an exercise copied a preset from the
+  catalogue, and that number travelled to Home Assistant as if the user had
+  set it — a sensor that always said "4". Only what is actually entered is
+  sent now.
+
 All notable changes to GymPit are documented in this file.
 
 ## [Unreleased]
