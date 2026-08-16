@@ -404,6 +404,7 @@ final class GymPitBridgeSyncService {
             summary.add(batchSummary)
         }
 
+        await backfillHistory(credentials: credentials)
         return summary
     }
 
@@ -427,7 +428,26 @@ final class GymPitBridgeSyncService {
             workoutIDs: sessions.map { $0.id.uuidString },
             credentials: credentials
         )
+        await backfillHistory(credentials: credentials)
         return summary
+    }
+
+    /// Bittet HealthPit, die Vergangenheit nachzutragen.
+    ///
+    /// Hochgeladene Trainings stehen zunaechst nur als aktueller Zustand da.
+    /// Home Assistant kann seine Zustandstabelle nicht rueckdatieren, seine
+    /// Statistik aber schon – und genau die fuellt dieser Aufruf. Ohne ihn
+    /// zeigt ein Diagramm ueber ein Jahr eine einzige Sitzung: die letzte.
+    ///
+    /// Ein Fehlschlag bleibt folgenlos. Der Upload ist zu diesem Zeitpunkt
+    /// erledigt, und der naechste Abgleich versucht es erneut.
+    private func backfillHistory(credentials: GymPitBridgeCredentials) async {
+        var endpoint = credentials.baseURL
+        endpoint.append(path: credentials.apiPath("history/workouts"))
+        var request = authorizedRequest(url: endpoint, method: "POST", credentials: credentials)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+        _ = try? await URLSession.shared.data(for: request)
     }
 
     func delete(workoutID: UUID) async throws {

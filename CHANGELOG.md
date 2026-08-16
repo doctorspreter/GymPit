@@ -32,6 +32,10 @@ All notable changes to GymPit are documented in this file.
 
 ### Added
 
+- **The past reaches Home Assistant.** After every sync GymPit asks HealthPit
+  to backfill the statistics of the uploaded sessions. Home Assistant cannot
+  backdate the state of a sensor, only its statistics — without that call a
+  chart over a year showed a single session, the last one.
 - Saved workouts can be edited. Open an entry in the history and tap Edit to
   correct its date, duration, calories, note, exercises, sets, weights, and RPE.
   The corrected workout replaces the previous one in Apple Health and HealthPit
