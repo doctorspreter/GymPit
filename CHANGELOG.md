@@ -32,6 +32,11 @@ All notable changes to GymPit are documented in this file.
 
 ### Added
 
+- **The sport travels as an identifier.** A session now carries
+  `sport_type: "STRENGTH_TRAINING"` beside its name. Without it HealthPit had
+  to read the name back into a sport — which works while it is called
+  "strength_training", but it is guessing, and guessing has already made three
+  sports out of one there.
 - **The past reaches Home Assistant.** After every sync GymPit asks HealthPit
   to backfill the statistics of the uploaded sessions. Home Assistant cannot
   backdate the state of a sensor, only its statistics — without that call a

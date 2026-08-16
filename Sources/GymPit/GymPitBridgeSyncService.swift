@@ -72,7 +72,15 @@ private struct GymPitBridgeWorkoutReconcilePayload: Encodable {
 struct GymPitBridgeImportedWorkoutPayload: Encodable {
     let id: String
     let source: String
+    /// Anzeigename. Bleibt fuer aeltere Integrationsstaende drin.
     let sport: String
+    /// Sprachneutrale Sportart, wie HealthPit sie fuehrt.
+    ///
+    /// Ohne sie muss die Integration die Sportart aus dem Namen zurueckraten.
+    /// Das geht gut, solange „strength_training" so heisst — aber es ist
+    /// Raten, und Raten hat hier schon einmal drei Sportarten aus einer
+    /// gemacht.
+    let sportType: String
     let title: String
     let start: Date
     let end: Date
@@ -87,6 +95,7 @@ struct GymPitBridgeImportedWorkoutPayload: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case id, source, sport, title, start, end, notes, exercises, route
+        case sportType = "sport_type"
         case durationMinutes = "duration_minutes"
         case distanceKm = "distance_km"
         case energyKcal = "energy_kcal"
@@ -711,6 +720,7 @@ private extension GymPitBridgeImportedWorkoutPayload {
         id = session.id.uuidString
         source = "gympit"
         sport = "strength_training"
+        sportType = "STRENGTH_TRAINING"
         title = session.planName
         start = session.startDate
         end = session.endDate
